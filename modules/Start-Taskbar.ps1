@@ -6,8 +6,10 @@ function Invoke-TDTStartTaskbar {
     $allUsers = if ($null -ne $Config.PSObject.Properties['AllUsers']) { [bool]$Config.AllUsers } else { $true }
     $advanced = 'Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
 
-    if ($Config.HideWidgets -and $PSCmdlet.ShouldProcess('Taskbar', 'Nascondere Widgets')) {
-        Set-TDTUserDword -RelativePath $advanced -Name 'TaskbarDa' -Value 0 -AllUsers $allUsers
+    # Widgets: use the documented machine policy instead of the protected per-user TaskbarDa value.
+    if ($Config.HideWidgets -and $PSCmdlet.ShouldProcess('HKLM:\SOFTWARE\Policies\Microsoft\Dsh', 'Disabilitare Widgets per il dispositivo')) {
+        $widgetsPolicy = 'HKLM:\SOFTWARE\Policies\Microsoft\Dsh'
+        [void](Set-TDTRegistryDword -Path $widgetsPolicy -Name 'AllowNewsAndInterests' -Value 0)
     }
 
     if ($Config.LeftAlignTaskbar -and $PSCmdlet.ShouldProcess('Taskbar', 'Allineare Start a sinistra')) {
