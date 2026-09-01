@@ -16,80 +16,44 @@ function Set-TDTRegistryDword {
     }
 }
 
-function Invoke-TDTUserHiveAction {
+function Get-TDTDeterministicGuid {
+    param([Parameter(Mandatory)][string]$Text)
+
+    $md5 = [System.Security.Cryptography.MD5]::Create()
+    try {
+        $bytes = [Text.Encoding]::UTF8.GetBytes($Text)
+        $hash = $md5.ComputeHash($bytes)
+        $guidBytes = New-Object byte[] 16
+        [Array]::Copy($hash, $guidBytes, 16)
+        return (New-Object Guid (,$guidBytes)).ToString('B')
+    }
+    finally {
+        $md5.Dispose()
+    }
+}
+
+function Register-TDTActiveSetupDword {
     param(
-        [Parameter(Mandatory)][scriptblock]$Action,
-        [switch]$IncludeDefaultProfile
+        [Parameter(Mandatory)][string]$RelativePath,
+        [Parameter(Mandatory)][string]$Name,
+        [Parameter(Mandatory)][int]$Value
     )
 
-    $profileList = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'
-    $profiles = Get-ChildItem $profileList -ErrorAction SilentlyContinue | Where-Object {
-        $_.PSChildName -match '^S-1-5-21-'
-    }
+    # Active Setup esegue lo StubPath nel contesto di ogni utente al prossimo accesso.
+    # In questo modo non forziamo la scrittura negli hive di profili non attivi/protetti.
+    $componentGuid = Get-TDTDeterministicGuid -Text "$RelativePath|$Name"
+    $componentPath = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\$componentGuid"
+    if (-not (Test-Path $componentPath)) { New-Item -Path $componentPath -Force | Out-Null }
 
-    foreach ($profile in $profiles) {
-        $sid = $profile.PSChildName
-        $profilePath = (Get-ItemProperty $profile.PSPath -Name ProfileImagePath -ErrorAction SilentlyContinue).ProfileImagePath
-        if (-not $profilePath) { continue }
-        $profilePath = [Environment]::ExpandEnvironmentVariables($profilePath)
-        $ntUser = Join-Path $profilePath 'NTUSER.DAT'
-        if (-not (Test-Path $ntUser)) { continue }
+    $regPath = 'HKCU\' + $RelativePath.Replace(':','').Replace('/','\')
+    $stubPath = "reg.exe add `"$regPath`" /v `"$Name`" /t REG_DWORD /d $Value /f"
+    $now = Get-Date
+    $version = "{0},{1},{2},{3}" -f $now.Year,$now.Month,$now.Day,([int]($now.ToString('HHmm')))
 
-        # If Windows already has the hive loaded, use it directly.
-        $loadedPath = "Registry::HKEY_USERS\$sid"
-        if (Test-Path $loadedPath) {
-            try { & $Action $loadedPath }
-            catch { Write-Warning "Profilo $profilePath saltato: $($_.Exception.Message)" }
-            continue
-        }
-
-        # Offline profile: load NTUSER.DAT temporarily under HKU.
-        $tempName = "TDT_$([guid]::NewGuid().ToString('N'))"
-        $tempPath = "Registry::HKEY_USERS\$tempName"
-        & reg.exe load "HKU\$tempName" "$ntUser" 2>$null | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Impossibile caricare il profilo offline $profilePath; viene saltato."
-            continue
-        }
-
-        try {
-            & $Action $tempPath
-        }
-        catch {
-            Write-Warning "Profilo $profilePath saltato: $($_.Exception.Message)"
-        }
-        finally {
-            [gc]::Collect()
-            [gc]::WaitForPendingFinalizers()
-            & reg.exe unload "HKU\$tempName" 2>$null | Out-Null
-        }
-    }
-
-    if ($IncludeDefaultProfile) {
-        $defaultNtUser = Join-Path $env:SystemDrive 'Users\Default\NTUSER.DAT'
-        if (Test-Path $defaultNtUser) {
-            $tempName = "TDT_Default_$([guid]::NewGuid().ToString('N'))"
-            $tempPath = "Registry::HKEY_USERS\$tempName"
-            & reg.exe load "HKU\$tempName" "$defaultNtUser" 2>$null | Out-Null
-
-            if ($LASTEXITCODE -eq 0) {
-                try {
-                    & $Action $tempPath
-                }
-                catch {
-                    Write-Warning "Profilo Default saltato: $($_.Exception.Message)"
-                }
-                finally {
-                    [gc]::Collect()
-                    [gc]::WaitForPendingFinalizers()
-                    & reg.exe unload "HKU\$tempName" 2>$null | Out-Null
-                }
-            }
-            else {
-                Write-Warning 'Impossibile caricare il profilo Default; le impostazioni per i nuovi utenti vengono saltate.'
-            }
-        }
-    }
+    New-ItemProperty -Path $componentPath -Name '(default)' -PropertyType String -Value "TecnicoDigitale - $Name" -Force | Out-Null
+    New-ItemProperty -Path $componentPath -Name 'Version' -PropertyType String -Value $version -Force | Out-Null
+    New-ItemProperty -Path $componentPath -Name 'IsInstalled' -PropertyType DWord -Value 1 -Force | Out-Null
+    New-ItemProperty -Path $componentPath -Name 'StubPath' -PropertyType String -Value $stubPath -Force | Out-Null
 }
 
 function Set-TDTUserDword {
@@ -100,13 +64,15 @@ function Set-TDTUserDword {
         [bool]$AllUsers = $true
     )
 
-    if (-not $AllUsers) {
-        [void](Set-TDTRegistryDword -Path "HKCU:\$RelativePath" -Name $Name -Value $Value)
-        return
-    }
+    # Applica immediatamente all'utente che sta eseguendo il toolkit.
+    [void](Set-TDTRegistryDword -Path "HKCU:\$RelativePath" -Name $Name -Value $Value)
 
-    Invoke-TDTUserHiveAction -IncludeDefaultProfile -Action {
-        param($HiveRoot)
-        [void](Set-TDTRegistryDword -Path "$HiveRoot\$RelativePath" -Name $Name -Value $Value)
+    if ($AllUsers) {
+        try {
+            Register-TDTActiveSetupDword -RelativePath $RelativePath -Name $Name -Value $Value
+        }
+        catch {
+            Write-Warning "Impossibile registrare Active Setup per $RelativePath\$Name : $($_.Exception.Message)"
+        }
     }
 }
