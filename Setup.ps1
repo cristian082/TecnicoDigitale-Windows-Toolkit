@@ -1,0 +1,53 @@
+[CmdletBinding(SupportsShouldProcess=$true)]
+param(
+    [ValidateSet('Standard','Gaming','Business')]
+    [string]$Preset = 'Standard'
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+$Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$LogDir = Join-Path $Root 'logs'
+if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir | Out-Null }
+$LogPath = Join-Path $LogDir ("Toolkit-{0:yyyyMMdd-HHmmss}.log" -f (Get-Date))
+Start-Transcript -Path $LogPath -Force | Out-Null
+
+function Test-Administrator {
+    $id = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($id)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+if (-not (Test-Administrator)) {
+    throw 'Eseguire Setup.ps1 da PowerShell come amministratore.'
+}
+
+$presetPath = Join-Path $Root "presets\$Preset.json"
+if (-not (Test-Path $presetPath)) { throw "Preset non trovato: $presetPath" }
+$config = Get-Content $presetPath -Raw | ConvertFrom-Json
+
+Write-Host "TecnicoDigitale Windows Toolkit - Preset: $Preset" -ForegroundColor Cyan
+
+$moduleOrder = @('Restore','Privacy','Explorer','Start-Taskbar','Debloat','Gaming','Software')
+foreach ($module in $moduleOrder) {
+    $path = Join-Path $Root "modules\$module.ps1"
+    if (-not (Test-Path $path)) { throw "Modulo mancante: $path" }
+    . $path
+}
+
+try {
+    if ($config.Restore.Enabled) { Invoke-TDTRestore -Config $config.Restore -WhatIf:$WhatIfPreference }
+    if ($config.Privacy.Enabled) { Invoke-TDTPrivacy -Config $config.Privacy -WhatIf:$WhatIfPreference }
+    if ($config.Explorer.Enabled) { Invoke-TDTExplorer -Config $config.Explorer -WhatIf:$WhatIfPreference }
+    if ($config.StartTaskbar.Enabled) { Invoke-TDTStartTaskbar -Config $config.StartTaskbar -WhatIf:$WhatIfPreference }
+    if ($config.Debloat.Enabled) { Invoke-TDTDebloat -Config $config.Debloat -WhatIf:$WhatIfPreference }
+    if ($config.Gaming.Enabled) { Invoke-TDTGaming -Config $config.Gaming -WhatIf:$WhatIfPreference }
+    if ($config.Software.Enabled) { Invoke-TDTSoftware -Config $config.Software -WhatIf:$WhatIfPreference }
+
+    Write-Host 'Operazione completata. Alcune modifiche richiedono disconnessione o riavvio.' -ForegroundColor Green
+}
+finally {
+    Stop-Transcript | Out-Null
+    Write-Host "Log: $LogPath"
+}
