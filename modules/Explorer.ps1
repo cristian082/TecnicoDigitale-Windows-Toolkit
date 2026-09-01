@@ -3,17 +3,18 @@ function Invoke-TDTExplorer {
     param([Parameter(Mandatory)]$Config)
 
     Write-Host '[Explorer] Configurazione Esplora file'
-    $advanced = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
+    $allUsers = if ($null -ne $Config.PSObject.Properties['AllUsers']) { [bool]$Config.AllUsers } else { $true }
+    $relative = 'Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
 
-    if ($Config.ShowFileExtensions -and $PSCmdlet.ShouldProcess($advanced, 'Mostrare estensioni file')) {
-        New-ItemProperty -Path $advanced -Name HideFileExt -PropertyType DWord -Value 0 -Force | Out-Null
+    if ($Config.ShowFileExtensions -and $PSCmdlet.ShouldProcess('Explorer', 'Mostrare estensioni file')) {
+        Set-TDTUserDword -RelativePath $relative -Name 'HideFileExt' -Value 0 -AllUsers $allUsers
     }
 
-    if ($Config.OpenThisPC -and $PSCmdlet.ShouldProcess($advanced, 'Aprire Esplora file su Questo PC')) {
-        New-ItemProperty -Path $advanced -Name LaunchTo -PropertyType DWord -Value 1 -Force | Out-Null
+    if ($Config.OpenThisPC -and $PSCmdlet.ShouldProcess('Explorer', 'Aprire Esplora file su Questo PC')) {
+        Set-TDTUserDword -RelativePath $relative -Name 'LaunchTo' -Value 1 -AllUsers $allUsers
     }
 
-    if ($Config.ShowHiddenFiles -and $PSCmdlet.ShouldProcess($advanced, 'Mostrare file nascosti')) {
-        New-ItemProperty -Path $advanced -Name Hidden -PropertyType DWord -Value 1 -Force | Out-Null
+    if ($Config.ShowHiddenFiles -and $PSCmdlet.ShouldProcess('Explorer', 'Mostrare file nascosti')) {
+        Set-TDTUserDword -RelativePath $relative -Name 'Hidden' -Value 1 -AllUsers $allUsers
     }
 }
