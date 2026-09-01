@@ -4,8 +4,16 @@ function Set-TDTRegistryDword {
         [Parameter(Mandatory)][string]$Name,
         [Parameter(Mandatory)][int]$Value
     )
-    if (-not (Test-Path $Path)) { New-Item -Path $Path -Force | Out-Null }
-    New-ItemProperty -Path $Path -Name $Name -PropertyType DWord -Value $Value -Force | Out-Null
+
+    try {
+        if (-not (Test-Path $Path)) { New-Item -Path $Path -Force -ErrorAction Stop | Out-Null }
+        New-ItemProperty -Path $Path -Name $Name -PropertyType DWord -Value $Value -Force -ErrorAction Stop | Out-Null
+        return $true
+    }
+    catch {
+        Write-Warning "Impossibile modificare $Path\$Name : $($_.Exception.Message)"
+        return $false
+    }
 }
 
 function Invoke-TDTUserHiveAction {
@@ -27,21 +35,33 @@ function Invoke-TDTUserHiveAction {
         $ntUser = Join-Path $profilePath 'NTUSER.DAT'
         if (-not (Test-Path $ntUser)) { continue }
 
+        # If Windows already has the hive loaded, use it directly.
         $loadedPath = "Registry::HKEY_USERS\$sid"
         if (Test-Path $loadedPath) {
-            & $Action $loadedPath
+            try { & $Action $loadedPath }
+            catch { Write-Warning "Profilo $profilePath saltato: $($_.Exception.Message)" }
             continue
         }
 
+        # Offline profile: load NTUSER.DAT temporarily under HKU.
         $tempName = "TDT_$([guid]::NewGuid().ToString('N'))"
         $tempPath = "Registry::HKEY_USERS\$tempName"
-        & reg.exe load "HKU\$tempName" "$ntUser" | Out-Null
-        if ($LASTEXITCODE -eq 0) {
-            try { & $Action $tempPath }
-            finally {
-                [gc]::Collect(); [gc]::WaitForPendingFinalizers()
-                & reg.exe unload "HKU\$tempName" | Out-Null
-            }
+        & reg.exe load "HKU\$tempName" "$ntUser" 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Impossibile caricare il profilo offline $profilePath; viene saltato."
+            continue
+        }
+
+        try {
+            & $Action $tempPath
+        }
+        catch {
+            Write-Warning "Profilo $profilePath saltato: $($_.Exception.Message)"
+        }
+        finally {
+            [gc]::Collect()
+            [gc]::WaitForPendingFinalizers()
+            & reg.exe unload "HKU\$tempName" 2>$null | Out-Null
         }
     }
 
@@ -50,13 +70,23 @@ function Invoke-TDTUserHiveAction {
         if (Test-Path $defaultNtUser) {
             $tempName = "TDT_Default_$([guid]::NewGuid().ToString('N'))"
             $tempPath = "Registry::HKEY_USERS\$tempName"
-            & reg.exe load "HKU\$tempName" "$defaultNtUser" | Out-Null
+            & reg.exe load "HKU\$tempName" "$defaultNtUser" 2>$null | Out-Null
+
             if ($LASTEXITCODE -eq 0) {
-                try { & $Action $tempPath }
-                finally {
-                    [gc]::Collect(); [gc]::WaitForPendingFinalizers()
-                    & reg.exe unload "HKU\$tempName" | Out-Null
+                try {
+                    & $Action $tempPath
                 }
+                catch {
+                    Write-Warning "Profilo Default saltato: $($_.Exception.Message)"
+                }
+                finally {
+                    [gc]::Collect()
+                    [gc]::WaitForPendingFinalizers()
+                    & reg.exe unload "HKU\$tempName" 2>$null | Out-Null
+                }
+            }
+            else {
+                Write-Warning 'Impossibile caricare il profilo Default; le impostazioni per i nuovi utenti vengono saltate.'
             }
         }
     }
@@ -71,12 +101,12 @@ function Set-TDTUserDword {
     )
 
     if (-not $AllUsers) {
-        Set-TDTRegistryDword -Path "HKCU:\$RelativePath" -Name $Name -Value $Value
+        [void](Set-TDTRegistryDword -Path "HKCU:\$RelativePath" -Name $Name -Value $Value)
         return
     }
 
     Invoke-TDTUserHiveAction -IncludeDefaultProfile -Action {
         param($HiveRoot)
-        Set-TDTRegistryDword -Path "$HiveRoot\$RelativePath" -Name $Name -Value $Value
+        [void](Set-TDTRegistryDword -Path "$HiveRoot\$RelativePath" -Name $Name -Value $Value)
     }
 }
