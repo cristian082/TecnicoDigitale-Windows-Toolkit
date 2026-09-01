@@ -29,7 +29,7 @@ $config = Get-Content $presetPath -Raw | ConvertFrom-Json
 
 Write-Host "TecnicoDigitale Windows Toolkit - Preset: $Preset" -ForegroundColor Cyan
 
-$moduleOrder = @('Restore','Privacy','Explorer','Start-Taskbar','Debloat','Gaming','Software')
+$moduleOrder = @('Common','Restore','Privacy','Explorer','Start-Taskbar','Debloat','Gaming','Software')
 foreach ($module in $moduleOrder) {
     $path = Join-Path $Root "modules\$module.ps1"
     if (-not (Test-Path $path)) { throw "Modulo mancante: $path" }
