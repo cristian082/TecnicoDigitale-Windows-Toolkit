@@ -3,9 +3,7 @@ function Invoke-TDTPrivacy {
     param([Parameter(Mandatory)]$Config)
 
     Write-Host '[Privacy] Applicazione impostazioni conservative'
-
-    $cdm = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager'
-    if (-not (Test-Path $cdm)) { New-Item -Path $cdm -Force | Out-Null }
+    $allUsers = if ($null -ne $Config.PSObject.Properties['AllUsers']) { [bool]$Config.AllUsers } else { $true }
 
     $values = @{
         'SystemPaneSuggestionsEnabled' = 0
@@ -16,16 +14,12 @@ function Invoke-TDTPrivacy {
     }
 
     foreach ($name in $values.Keys) {
-        if ($PSCmdlet.ShouldProcess("$cdm\$name", 'Disabilitare suggerimenti/promozioni Windows')) {
-            New-ItemProperty -Path $cdm -Name $name -PropertyType DWord -Value $values[$name] -Force | Out-Null
+        if ($PSCmdlet.ShouldProcess("ContentDeliveryManager\$name", 'Disabilitare suggerimenti/promozioni Windows')) {
+            Set-TDTUserDword -RelativePath 'Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name $name -Value $values[$name] -AllUsers $allUsers
         }
     }
 
-    if ($Config.DisableAdvertisingId) {
-        $adv = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo'
-        if (-not (Test-Path $adv)) { New-Item -Path $adv -Force | Out-Null }
-        if ($PSCmdlet.ShouldProcess($adv, 'Disabilitare ID pubblicitario per utente')) {
-            New-ItemProperty -Path $adv -Name Enabled -PropertyType DWord -Value 0 -Force | Out-Null
-        }
+    if ($Config.DisableAdvertisingId -and $PSCmdlet.ShouldProcess('AdvertisingInfo', 'Disabilitare ID pubblicitario')) {
+        Set-TDTUserDword -RelativePath 'Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo' -Name 'Enabled' -Value 0 -AllUsers $allUsers
     }
 }
