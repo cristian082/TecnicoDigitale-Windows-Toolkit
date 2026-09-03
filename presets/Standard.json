@@ -2,7 +2,7 @@
   "Restore": { "Enabled": true, "CreateRestorePoint": true },
   "Privacy": { "Enabled": true, "DisableAdvertisingId": true },
   "Explorer": { "Enabled": true, "ShowFileExtensions": true, "OpenThisPC": true, "ShowHiddenFiles": false },
-  "StartTaskbar": { "Enabled": true, "HideWidgets": true, "LeftAlignTaskbar": false, "DisableSearchHighlights": true },
+  "StartTaskbar": { "Enabled": true, "HideWidgets": true, "LeftAlignTaskbar": false, "DisableSearchHighlights": true, "DisableWebSearchSuggestions": true, "EnableTaskbarEndTask": true },
   "Debloat": { "Enabled": true, "RemovePackages": ["Microsoft.BingNews", "Microsoft.BingWeather", "Microsoft.GetHelp", "Microsoft.Getstarted", "Microsoft.MicrosoftSolitaireCollection", "Microsoft.WindowsFeedbackHub", "Microsoft.ZuneMusic", "Microsoft.ZuneVideo"] },
   "Gaming": { "Enabled": false, "EnableGameMode": true, "DisableGameDVR": false },
   "Software": { "Enabled": true, "WingetPackages": ["RARLab.WinRAR", "VideoLAN.VLC", "Google.Chrome", "voidtools.Everything", "Adobe.Acrobat.Reader.64-bit"] }
