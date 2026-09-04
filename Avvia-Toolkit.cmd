@@ -2,6 +2,9 @@
 setlocal
 cd /d "%~dp0"
 
+set "TDT_VERSION=sconosciuta"
+for /f "usebackq delims=" %%V in (`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$v=Get-Content '%~dp0VERSION.json' -Raw|ConvertFrom-Json; $v.version"`) do set "TDT_VERSION=%%V"
+
 :: Richiede i privilegi di amministratore prima di mostrare il menu.
 net session >nul 2>&1
 if %errorlevel% neq 0 (
@@ -13,6 +16,7 @@ if %errorlevel% neq 0 (
 cls
 echo ==================================================
 echo       TECNICO DIGITALE - WINDOWS TOOLKIT
+echo                 Versione %TDT_VERSION%
 echo ==================================================
 echo.
 echo Scegli l'operazione:
@@ -33,13 +37,11 @@ echo   [5] ESCI
 echo.
 set "scelta="
 set /p "scelta=Scelta: "
-
 if "%scelta%"=="1" set "preset=Standard"& goto AVVIA
 if "%scelta%"=="2" set "preset=Gaming"& goto AVVIA
 if "%scelta%"=="3" set "preset=Business"& goto AVVIA
 if "%scelta%"=="4" goto UNDO
 if "%scelta%"=="5" exit /b
-
 echo.
 echo Scelta non valida. Premi un tasto e riprova.
 pause >nul
@@ -49,6 +51,7 @@ goto MENU
 cls
 echo ==================================================
 echo       TECNICO DIGITALE - WINDOWS TOOLKIT
+echo                 Versione %TDT_VERSION%
 echo ==================================================
 echo.
 echo Profilo selezionato: %preset%
@@ -62,6 +65,7 @@ goto FINE
 cls
 echo ==================================================
 echo       TECNICO DIGITALE - RIPRISTINO MODIFICHE
+echo                 Versione %TDT_VERSION%
 echo ==================================================
 echo.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Undo.ps1"
