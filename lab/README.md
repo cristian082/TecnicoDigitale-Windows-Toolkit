@@ -1,130 +1,143 @@
 # TecnicoDigitale Test Lab - VirtualBox
 
-Questa cartella documenta il laboratorio usato per sviluppare e verificare il TecnicoDigitale Windows Toolkit su una macchina Windows 11 pulita e riproducibile.
+Questa cartella documenta il laboratorio usato per sviluppare e verificare il TecnicoDigitale Windows Toolkit su macchine Windows 11 pulite e riproducibili.
 
 ## VM di riferimento
 
-Configurazione consigliata iniziale:
+Configurazione consigliata:
 
-- Windows 11 Pro 25H2 x64, italiano
-- 2 vCPU
-- 6-8 GB RAM
-- disco virtuale dinamico da 80 GB
-- EFI/UEFI abilitato
-- TPM 2.0 se disponibile; per il solo laboratorio e possibile usare il bypass dei requisiti
-- nessun software aggiuntivo prima dello snapshot base
+- Windows 11 Pro 25H2 x64, italiano;
+- Windows 11 Enterprise LTSC 2024 x64, italiano, come riferimento comparativo;
+- 2 vCPU;
+- 6-8 GB RAM;
+- disco virtuale dinamico da 80 GB;
+- EFI/UEFI abilitato;
+- TPM 2.0 se disponibile;
+- nessun software aggiuntivo prima dello snapshot base.
 
-Nome VM consigliato:
+## Regola fondamentale: baseline pulita
 
-`TDT-Win11-Pro-25H2`
+La prima installazione deve essere il piu possibile stock. Prima di eseguire il Toolkit, rimuovere software, disabilitare servizi o applicare tweak manuali, creare uno snapshot della VM.
 
-## Regola fondamentale: installazione offline
-
-La prima installazione deve essere eseguita con la scheda di rete della VM disabilitata.
-
-Motivo: Windows Setup/OOBE puo scaricare aggiornamenti, driver, app e contenuti durante l'installazione. Questo rende la baseline non riproducibile e rende piu difficile capire se un comportamento dipende da Windows originale, da Windows Update o dal Toolkit.
-
-### VirtualBox GUI
-
-Prima di avviare il setup:
-
-1. Spegnere completamente la VM.
-2. Aprire `Impostazioni > Rete > Scheda 1`.
-3. Togliere la spunta a `Abilita scheda di rete`.
-4. Installare Windows fino al desktop senza rete.
-
-### VBoxManage
-
-Per disattivare completamente la NIC:
-
-```cmd
-VBoxManage modifyvm "TDT-Win11-Pro-25H2" --nic1 none
-```
-
-Per riattivarla successivamente in NAT:
-
-```cmd
-VBoxManage modifyvm "TDT-Win11-Pro-25H2" --nic1 nat
-```
-
-## Snapshot obbligatori
+## Snapshot consigliati
 
 ### 00-WIN11-STOCK-OFFLINE
 
-Crearlo appena raggiunto il desktop per la prima volta, prima di:
-
-- abilitare la rete;
-- eseguire Windows Update;
-- installare Guest Additions;
-- installare software;
-- eseguire il Toolkit;
-- applicare modifiche manuali.
-
-Questo snapshot rappresenta Windows appena installato.
+Crearlo appena raggiunto il desktop per la prima volta, prima di rete, aggiornamenti, Guest Additions, software o Toolkit.
 
 ### 01-WIN11-UPDATED
 
-Dopo lo snapshot `00-WIN11-STOCK-OFFLINE`:
+Dopo aver aggiornato Windows e verificato la stabilita della VM, creare lo snapshot usato per i normali test del Toolkit.
 
-1. riattivare la rete;
-2. eseguire Windows Update fino a quando non restano aggiornamenti normali disponibili;
-3. riavviare tutte le volte necessarie;
-4. installare i driver/Guest Additions necessari al laboratorio;
-5. verificare che il sistema sia stabile;
-6. creare lo snapshot `01-WIN11-UPDATED`.
+## Audit servizi Windows
 
-Questo e lo snapshot principale da cui eseguire i test normali del Toolkit.
+`Services-Audit.ps1` e uno strumento **read-only**. Non cambia tipo di avvio, stato o configurazione dei servizi.
 
-## Sequenza di test consigliata
+La versione 2 raccoglie per ogni servizio:
 
-Per ogni ciclo di sviluppo:
+- nome reale;
+- nome normalizzato per confrontare servizi per-utente con suffisso diverso fra installazioni;
+- nome visualizzato;
+- stato Running/Stopped;
+- StartMode;
+- Automatic Delayed Start quando presente;
+- account di avvio;
+- percorso eseguibile;
+- PID;
+- tipo di servizio;
+- dipendenze;
+- servizi dipendenti;
+- output grezzo di `sc.exe qtriggerinfo` per lo studio dei trigger.
+
+Esempio:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\lab\Services-Audit.ps1" -Label "PRO-25H2"
+```
+
+Per LTSC:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\lab\Services-Audit.ps1" -Label "LTSC-2024"
+```
+
+I report vengono salvati in `lab\reports` in formato JSON e CSV.
+
+## Confronto Pro ↔ LTSC
+
+`Compare-Services.ps1` confronta due report generati da `Services-Audit.ps1`. Supporta anche i vecchi report schema 1: se manca `NormalizedName`, lo calcola durante il confronto.
+
+Esempio, usando LTSC come riferimento e Pro come candidato:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\lab\Compare-Services.ps1" `
+  -ReferencePath ".\lab\reports\Services-LTSC-2024-XXXXXXXX-XXXXXX.json" `
+  -CandidatePath ".\lab\reports\Services-PRO-25H2-XXXXXXXX-XXXXXX.json"
+```
+
+Il comparatore divide i risultati in:
+
+- `REFERENCE_ONLY` — presente solo nella baseline di riferimento;
+- `CANDIDATE_ONLY` — presente solo nella macchina candidata;
+- `START_CONFIGURATION_DIFFERENT` — StartMode o Delayed Auto Start differente;
+- `STATE_DIFFERENT` — configurazione di avvio uguale ma stato corrente diverso;
+- `IDENTICAL_CORE_STATE` — configurazione e stato principali coincidenti.
+
+I suffissi delle istanze per-utente, ad esempio `_516e3`, vengono rimossi solo ai fini del confronto. Il nome originale resta nel report.
+
+### Attenzione alle build
+
+Il comparatore segnala esplicitamente quando le build Windows sono diverse. Una differenza fra LTSC e Pro non deve essere attribuita automaticamente all'edizione: puo dipendere anche dalla diversa build, dallo stato della VM, dal login, dall'hardware virtuale o da un trigger appena eseguito.
+
+Per questo **nessuna differenza rilevata dal comparatore diventa automaticamente un tweak del Toolkit**.
+
+## Metodo per approvare una modifica ai servizi
+
+Prima di cambiare un servizio occorre:
+
+1. rilevare una differenza interessante;
+2. capire la funzione del servizio;
+3. verificare StartMode, delayed start e trigger;
+4. verificare dipendenze e servizi dipendenti;
+5. stabilire se il comportamento dipende da edizione o build;
+6. testare la modifica in snapshot;
+7. verificare Windows Update, Store, rete, audio, Bluetooth, stampa, ricerca, Hello e le altre funzioni coinvolte;
+8. misurare se esiste un beneficio concreto;
+9. documentare la decisione in `docs/Services.md`;
+10. solo dopo valutare l'inserimento in `modules/Services.ps1` con backup e Undo.
+
+## Sequenza generale di test Toolkit
+
+Per ogni ciclo:
 
 1. ripristinare `01-WIN11-UPDATED`;
 2. avviare Windows;
-3. copiare/scaricare la versione del Toolkit da testare;
-4. eseguire prima `-WhatIf` quando applicabile;
-5. eseguire il preset reale;
-6. salvare i log;
-7. riavviare Windows;
-8. verificare le impostazioni applicate;
-9. eseguire una seconda volta lo stesso preset per verificare l'idempotenza;
+3. eseguire prima `-WhatIf` quando applicabile;
+4. eseguire il preset reale;
+5. salvare log e report;
+6. riavviare Windows;
+7. verificare le impostazioni applicate;
+8. eseguire una seconda volta lo stesso preset per verificare l'idempotenza;
+9. provare Undo;
 10. ripristinare lo snapshot prima del test successivo.
-
-## Baseline futura
-
-Il laboratorio verra usato anche per il nuovo modulo di Check-up, che dovra essere inizialmente read-only e rilevare almeno:
-
-- edizione/build/attivazione Windows;
-- canale licenza Windows: OEM, Retail, Volume MAK/KMS;
-- eventuale chiave OEM nel firmware senza mostrare il product key completo;
-- Microsoft Office installato, stato di attivazione e canale di licenza;
-- CPU e RAM;
-- dischi, tipo, spazio libero, TRIM e salute quando disponibile;
-- app/programmi in avvio automatico;
-- stato Defender, Firewall e UAC;
-- eventuale riavvio Windows Update pendente.
-
-Le licenze devono essere classificate in modo prudente come `OK`, `DA VERIFICARE` o `NON ATTIVO`. Una licenza Volume/KMS non va automaticamente definita falsa: puo essere legittima in un'organizzazione autorizzata.
 
 ## Cosa NON deve fare la baseline
 
-La VM base non deve usare un autounattend aggressivo che:
+La VM base non deve usare configurazioni aggressive che:
 
-- rimuove in massa AppX o Windows capabilities;
-- disabilita UAC;
-- disabilita SmartScreen;
-- disabilita Defender o Firewall;
-- disabilita Core Isolation/VBS/HVCI;
-- forza modifiche prestazionali;
-- rimuove Edge, OneDrive o altri componenti prima dei test;
-- applica i tweak che vogliamo misurare tramite il Toolkit.
-
-Se verra aggiunto un `autounattend.xml` al laboratorio, dovra limitarsi all'automazione dell'installazione e dell'OOBE, mantenendo Windows il piu possibile stock.
+- rimuovono in massa AppX o Windows capabilities;
+- disabilitano UAC;
+- disabilitano SmartScreen;
+- disabilitano Defender o Firewall;
+- disabilitano Core Isolation/VBS/HVCI;
+- forzano modifiche prestazionali;
+- applicano tweak ai servizi che vogliamo misurare;
+- rimuovono componenti prima dell'audit.
 
 ## Obiettivo
 
-Separare chiaramente tre stati della macchina:
+Separare chiaramente:
 
-`Windows stock offline` -> `Windows aggiornato` -> `Windows dopo TecnicoDigitale Toolkit`
+`Windows stock` -> `Windows aggiornato` -> `Windows dopo TecnicoDigitale Toolkit`
 
-In questo modo ogni modifica del Toolkit puo essere testata, ripetuta e confrontata senza dubbi sulla baseline.
+Il laboratorio serve a trasformare ogni modifica del Toolkit da ipotesi a intervento misurato, documentato e ripristinabile.
