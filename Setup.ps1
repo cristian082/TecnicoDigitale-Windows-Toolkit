@@ -29,7 +29,7 @@ $config = Get-Content $presetPath -Raw | ConvertFrom-Json
 
 Write-Host "TecnicoDigitale Windows Toolkit - Preset: $Preset" -ForegroundColor Cyan
 
-$moduleOrder = @('Common','Diagnostics','Restore','Privacy','Explorer','Start-Taskbar','Debloat','Gaming','Software')
+$moduleOrder = @('Backup','Common','Diagnostics','Restore','Privacy','Explorer','Start-Taskbar','Debloat','Gaming','Software')
 foreach ($module in $moduleOrder) {
     $path = Join-Path $Root "modules\$module.ps1"
     if (-not (Test-Path $path)) { throw "Modulo mancante: $path" }
@@ -38,6 +38,12 @@ foreach ($module in $moduleOrder) {
 
 try {
     if ($config.Diagnostics.Enabled) { [void](Invoke-TDTDiagnostics -Config $config.Diagnostics) }
+
+    # WhatIf deve restare completamente non invasivo: nessun backup viene creato.
+    if (-not $WhatIfPreference) {
+        Initialize-TDTBackupSession -Root $Root -Preset $Preset
+    }
+
     if ($config.Restore.Enabled) { Invoke-TDTRestore -Config $config.Restore -WhatIf:$WhatIfPreference }
     if ($config.Privacy.Enabled) { Invoke-TDTPrivacy -Config $config.Privacy -WhatIf:$WhatIfPreference }
     if ($config.Explorer.Enabled) { Invoke-TDTExplorer -Config $config.Explorer -WhatIf:$WhatIfPreference }
@@ -46,6 +52,7 @@ try {
     if ($config.Gaming.Enabled) { Invoke-TDTGaming -Config $config.Gaming -WhatIf:$WhatIfPreference }
     if ($config.Software.Enabled) { Invoke-TDTSoftware -Config $config.Software -WhatIf:$WhatIfPreference }
 
+    if (-not $WhatIfPreference) { Complete-TDTBackupSession }
     Write-Host 'Operazione completata. Alcune modifiche richiedono disconnessione o riavvio.' -ForegroundColor Green
 }
 finally {
