@@ -4,7 +4,8 @@ $script:TDTBackupPath = $null
 function Initialize-TDTBackupSession {
     param(
         [Parameter(Mandatory)][string]$Root,
-        [Parameter(Mandatory)][string]$Preset
+        [Parameter(Mandatory)][string]$Preset,
+        $VersionInfo
     )
 
     $backupDir = Join-Path $Root 'backups'
@@ -13,14 +14,17 @@ function Initialize-TDTBackupSession {
     $id = Get-Date -Format 'yyyyMMdd-HHmmss'
     $script:TDTBackupPath = Join-Path $backupDir ("Session-$id.json")
     $script:TDTBackupSession = [ordered]@{
-        SchemaVersion = 1
-        SessionId     = $id
-        CreatedAt     = (Get-Date).ToString('s')
-        ComputerName  = $env:COMPUTERNAME
-        UserName      = [Security.Principal.WindowsIdentity]::GetCurrent().Name
-        Preset        = $Preset
-        Completed     = $false
-        Registry      = @()
+        SchemaVersion  = 1
+        SessionId      = $id
+        CreatedAt      = (Get-Date).ToString('s')
+        ComputerName   = $env:COMPUTERNAME
+        UserName       = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+        Preset         = $Preset
+        ToolkitVersion = if ($VersionInfo) { $VersionInfo.Version } else { $null }
+        ToolkitBuild   = if ($VersionInfo) { $VersionInfo.Build } else { $null }
+        ToolkitStatus  = if ($VersionInfo) { $VersionInfo.Status } else { $null }
+        Completed      = $false
+        Registry       = @()
     }
 
     Save-TDTBackupSession
@@ -78,6 +82,6 @@ function Add-TDTRegistryBackup {
 function Complete-TDTBackupSession {
     if (-not $script:TDTBackupSession) { return }
     $script:TDTBackupSession.Completed = $true
-    $script:TDTBackupSession.CompletedAt = (Get-Date).ToString('s')
+    $script:TDTBackupSession['CompletedAt'] = (Get-Date).ToString('s')
     Save-TDTBackupSession
 }
