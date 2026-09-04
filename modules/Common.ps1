@@ -6,6 +6,9 @@ function Set-TDTRegistryDword {
     )
 
     try {
+        if (Get-Command Add-TDTRegistryBackup -ErrorAction SilentlyContinue) {
+            Add-TDTRegistryBackup -Path $Path -Name $Name
+        }
         if (-not (Test-Path $Path)) { New-Item -Path $Path -Force -ErrorAction Stop | Out-Null }
         New-ItemProperty -Path $Path -Name $Name -PropertyType DWord -Value $Value -Force -ErrorAction Stop | Out-Null
         return $true
