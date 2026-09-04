@@ -1,4 +1,5 @@
 {
+  "Diagnostics": { "Enabled": true, "SaveJsonReport": true },
   "Restore": { "Enabled": true, "CreateRestorePoint": true },
   "Privacy": { "Enabled": true, "DisableAdvertisingId": true },
   "Explorer": { "Enabled": true, "ShowFileExtensions": true, "OpenThisPC": true, "ShowHiddenFiles": false },
