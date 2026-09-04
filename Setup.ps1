@@ -27,21 +27,23 @@ $presetPath = Join-Path $Root "presets\$Preset.json"
 if (-not (Test-Path $presetPath)) { throw "Preset non trovato: $presetPath" }
 $config = Get-Content $presetPath -Raw | ConvertFrom-Json
 
-Write-Host "TecnicoDigitale Windows Toolkit - Preset: $Preset" -ForegroundColor Cyan
-
-$moduleOrder = @('Backup','Common','Diagnostics','Restore','Privacy','Explorer','Start-Taskbar','Debloat','Gaming','Software')
+$moduleOrder = @('Version','Backup','Common','Diagnostics','Restore','Privacy','Explorer','Start-Taskbar','Debloat','Gaming','Software')
 foreach ($module in $moduleOrder) {
     $path = Join-Path $Root "modules\$module.ps1"
     if (-not (Test-Path $path)) { throw "Modulo mancante: $path" }
     . $path
 }
 
+$script:TDTVersionInfo = Get-TDTVersionInfo -Root $Root
+Write-TDTVersionBanner -VersionInfo $script:TDTVersionInfo
+Write-Host "Preset: $Preset" -ForegroundColor Cyan
+
 try {
-    if ($config.Diagnostics.Enabled) { [void](Invoke-TDTDiagnostics -Config $config.Diagnostics) }
+    if ($config.Diagnostics.Enabled) { [void](Invoke-TDTDiagnostics -Config $config.Diagnostics -VersionInfo $script:TDTVersionInfo) }
 
     # WhatIf deve restare completamente non invasivo: nessun backup viene creato.
     if (-not $WhatIfPreference) {
-        Initialize-TDTBackupSession -Root $Root -Preset $Preset
+        Initialize-TDTBackupSession -Root $Root -Preset $Preset -VersionInfo $script:TDTVersionInfo
     }
 
     if ($config.Restore.Enabled) { Invoke-TDTRestore -Config $config.Restore -WhatIf:$WhatIfPreference }
