@@ -15,7 +15,7 @@ echo ==================================================
 echo       TECNICO DIGITALE - WINDOWS TOOLKIT
 echo ==================================================
 echo.
-echo Scegli il profilo da applicare:
+echo Scegli l'operazione:
 echo.
 echo   [1] STANDARD
 echo       PC domestici e uso generale
@@ -26,7 +26,10 @@ echo.
 echo   [3] BUSINESS
 echo       PC professionali e postazioni di lavoro
 echo.
-echo   [4] ESCI
+echo   [4] RIPRISTINA MODIFICHE TOOLKIT
+echo       Annulla le modifiche registrate nell'ultima sessione
+echo.
+echo   [5] ESCI
 echo.
 set "scelta="
 set /p "scelta=Scelta: "
@@ -34,7 +37,8 @@ set /p "scelta=Scelta: "
 if "%scelta%"=="1" set "preset=Standard"& goto AVVIA
 if "%scelta%"=="2" set "preset=Gaming"& goto AVVIA
 if "%scelta%"=="3" set "preset=Business"& goto AVVIA
-if "%scelta%"=="4" exit /b
+if "%scelta%"=="4" goto UNDO
+if "%scelta%"=="5" exit /b
 
 echo.
 echo Scelta non valida. Premi un tasto e riprova.
@@ -52,7 +56,17 @@ echo.
 echo Avvio del toolkit...
 echo.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Setup.ps1" -Preset "%preset%"
+goto FINE
 
+:UNDO
+cls
+echo ==================================================
+echo       TECNICO DIGITALE - RIPRISTINO MODIFICHE
+echo ==================================================
+echo.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Undo.ps1"
+
+:FINE
 echo.
 echo ==================================================
 echo Esecuzione terminata. Premi un tasto per chiudere.
