@@ -36,7 +36,7 @@ function Set-TDTDnsPreset {
     $old=@(Get-DnsClientServerAddress -InterfaceIndex $a.ifIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue).ServerAddresses
     Write-Host ("DNS attuali: {0}" -f ($old -join ', '))
     Write-Host ' [1] Automatico (DHCP)';Write-Host ' [2] Cloudflare 1.1.1.1 / 1.0.0.1';Write-Host ' [3] Google 8.8.8.8 / 8.8.4.4';Write-Host ' [4] Quad9 9.9.9.9 / 149.112.112.112'
-    $p=Read-Host 'Preset';
+    $p=Read-Host 'Preset'
     switch($p){
       '1' {Set-DnsClientServerAddress -InterfaceIndex $a.ifIndex -ResetServerAddresses}
       '2' {Set-DnsClientServerAddress -InterfaceIndex $a.ifIndex -ServerAddresses @('1.1.1.1','1.0.0.1')}
@@ -52,12 +52,11 @@ function Set-TDTDnsPreset {
 function Invoke-TDTNetworkCheck {
     Write-Host "`n[RETE] Diagnostica rapida" -ForegroundColor Cyan
     $cfg=Get-NetIPConfiguration -ErrorAction SilentlyContinue | Where-Object {$_.IPv4Address -and $_.NetAdapter.Status -eq 'Up'}
-    foreach($c in $cfg){
-      Write-Host ("{0}: IP {1}  Gateway {2}  DNS {3}" -f $c.InterfaceAlias,$c.IPv4Address.IPAddress,$c.IPv4DefaultGateway.NextHop,($c.DNSServer.ServerAddresses -join ','))
-    }
+    foreach($c in $cfg){Write-Host ("{0}: IP {1}  Gateway {2}  DNS {3}" -f $c.InterfaceAlias,$c.IPv4Address.IPAddress,$c.IPv4DefaultGateway.NextHop,($c.DNSServer.ServerAddresses -join ','))}
     $gateway=($cfg|Where-Object IPv4DefaultGateway|Select-Object -First 1).IPv4DefaultGateway.NextHop
-    if($gateway){Write-Host ("Gateway: {0}" -f $(if(Test-Connection $gateway -Count 1 -Quiet -ErrorAction SilentlyContinue){'OK'}else{'ERRORE'}))}
-    Write-Host ("Internet IP: {0}" -f $(if(Test-Connection '1.1.1.1' -Count 1 -Quiet -ErrorAction SilentlyContinue){'OK'}else{'ERRORE'}))
+    if($gateway){$gatewayOk=Test-Connection $gateway -Count 1 -Quiet -ErrorAction SilentlyContinue;Write-Host ("Gateway: {0}" -f $(if($gatewayOk){'OK'}else{'ERRORE'}))}
+    $internetOk=Test-Connection '1.1.1.1' -Count 1 -Quiet -ErrorAction SilentlyContinue
+    Write-Host ("Internet IP: {0}" -f $(if($internetOk){'OK'}else{'ERRORE'}))
     try{Resolve-DnsName 'www.microsoft.com' -Type A -ErrorAction Stop|Out-Null;Write-Host 'DNS: OK'}catch{Write-Host 'DNS: ERRORE' -ForegroundColor Yellow}
 }
 
@@ -77,22 +76,21 @@ function Get-TDTProcessTriage {
     Write-Host "`n[SICUREZZA] Triage processi - sola analisi" -ForegroundColor Cyan
     Write-Host 'ATTENZIONE: un elemento segnalato non equivale a malware.' -ForegroundColor Yellow
     $startupText=((Get-CimInstance Win32_StartupCommand -ErrorAction SilentlyContinue).Command -join "`n")
-    $items=foreach($p in Get-CimInstance Win32_Process -ErrorAction SilentlyContinue){
-      if(-not $p.ExecutablePath){continue}
-      $path=$p.ExecutablePath; $sig=$null
+    $pf86=[Environment]::GetFolderPath('ProgramFilesX86')
+    $items=foreach($proc in Get-CimInstance Win32_Process -ErrorAction SilentlyContinue){
+      if(-not $proc.ExecutablePath){continue}
+      $path=$proc.ExecutablePath; $sig=$null
       try{$sig=Get-AuthenticodeSignature -LiteralPath $path -ErrorAction Stop}catch{}
       $score=0;$reasons=New-Object System.Collections.Generic.List[string]
-      $trustedPath=($path -like "$env:SystemRoot\System32\*" -or $path -like "$env:ProgramFiles\*" -or ${env:ProgramFiles(x86)} -and $path -like "${env:ProgramFiles(x86)}\*")
+      $trustedPath=($path -like "$env:SystemRoot\System32\*" -or $path -like "$env:ProgramFiles\*" -or ($pf86 -and $path -like "$pf86\*"))
       if(-not $sig -or $sig.Status -ne 'Valid'){$score+=2;$reasons.Add('firma non valida/assente')}
       if($path -like "$env:TEMP\*" -or $path -like "$env:LOCALAPPDATA\Temp\*"){$score+=3;$reasons.Add('esecuzione da TEMP')}
       elseif($path -like "$env:APPDATA\*" -or $path -like "$env:LOCALAPPDATA\*"){$score+=1;$reasons.Add('esecuzione da profilo utente')}
       if($startupText -and $startupText.IndexOf($path,[StringComparison]::OrdinalIgnoreCase)-ge 0){$score+=1;$reasons.Add('avvio automatico')}
       if($trustedPath -and $sig -and $sig.Status -eq 'Valid'){$score=[math]::Max(0,$score-1)}
-      if($score -ge 2){
-        [pscustomobject]@{Score=$score;PID=$p.ProcessId;Name=$p.Name;Publisher=if($sig -and $sig.SignerCertificate){$sig.SignerCertificate.Subject}else{''};Signature=if($sig){[string]$sig.Status}else{'Non disponibile'};Path=$path;Reasons=($reasons -join ', ')}
-      }
+      if($score -ge 2){[pscustomobject]@{Score=$score;PID=$proc.ProcessId;Name=$proc.Name;Publisher=if($sig -and $sig.SignerCertificate){$sig.SignerCertificate.Subject}else{''};Signature=if($sig){[string]$sig.Status}else{'Non disponibile'};Path=$path;Reasons=($reasons -join ', ')}}
     }
-    $items=@($items|Sort-Object Score -Descending,Name)
+    $items=@($items|Sort-Object -Property @{Expression='Score';Descending=$true},Name)
     if(-not $items){Write-Host 'Nessun processo con indicatori elementari di attenzione.' -ForegroundColor Green;return @()}
     $items|Format-Table Score,PID,Name,Signature,Reasons -AutoSize
     Write-Host "`nI risultati richiedono verifica tecnica: nessun processo viene terminato o cancellato." -ForegroundColor Yellow
