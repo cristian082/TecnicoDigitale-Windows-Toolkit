@@ -16,7 +16,7 @@ Il Toolkit deve essere sicuro su PC cliente sconosciuti. Non disabilitare Defend
 - Ogni build testabile incrementa `version` e `build`.
 
 ## Versione corrente
-`v0.1.4 - Build 4 [development]`.
+`v0.1.5 - Build 5 [development]`.
 
 ## Preset e transizioni
 STANDARD = base sicura. GAMING = Standard + estensioni Gaming. BUSINESS = Standard + estensioni Business.
@@ -33,19 +33,27 @@ Gaming gestisce e ripristina:
 - `HKCU\Software\Microsoft\GameBar\AllowAutoGameMode`
 - `HKCU\System\GameConfigStore\GameDVR_Enabled`
 
-Build 3 testata in VM:
+Business gestisce e ripristina:
+- `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarAl`
+
+## Matrice funzionale testata in VM
+Su Windows 11 Pro build 26200 / VirtualBox:
 - Standard → Gaming: PASS.
-- ProfileState Gaming verificato: i primi due valori non esistevano; `GameDVR_Enabled` era 1; Gaming ha applicato 1/1/0.
-- Gaming → Business: PASS. Uscendo da Gaming i primi due valori sono stati rimossi e `GameDVR_Enabled` è tornato a 1, senza warning/errori.
+- Gaming → Business: PASS; i valori Gaming sono tornati esattamente allo stato precedente.
+- Business Build 4: Start a sinistra PASS.
+- Business → Standard: PASS; Start tornato centrato, `TaskbarAl` rimosso perché prima di Business non esisteva, `GameDVR_Enabled=1`, nessun residuo Gaming.
+- Matrice completa `Standard → Gaming → Business → Standard`: PASS.
+
+Durante l'ultimo controllo `ProfileState.json` mostrava `Business: []` invece di `Business: null`, pur con ownership già vuota. Build 5 corregge solo questa normalizzazione, rimuovendo il wrapping che faceva sopravvivere un array vuoto nel risultato di `Restore-TDTOwnedRegistryEntries`.
+
+Commit Build 5:
+- `d810b2dfb34bc37a5c95d508c8573ee03a5005a9` — normalizza ownership vuota a `null`.
+- `09ab83d1b44487662078e0ce4a9a94e5bb237b85` — v0.1.5 Build 5.
 
 ## Business Build 4
-Durante il test Business Build 3 è emerso che Start restava centrato anche dopo riavvio. Causa reale: `presets/Business.json` aveva `LeftAlignTaskbar=false`; `Start-Taskbar.ps1` applica `TaskbarAl=0` solo quando il flag è true.
+Build 4 ha corretto `presets/Business.json` a `LeftAlignTaskbar=true` e introdotto ownership reversibile di `TaskbarAl`.
 
-Build 4 corregge Business a `LeftAlignTaskbar=true` e aggiunge ownership reversibile di `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarAl`.
-
-Entrando in Business viene salvato lo stato precedente di `TaskbarAl`; Business applica 0 (sinistra). Uscendo da Business verso Standard/Gaming, il valore precedente viene ripristinato solo se è ancora 0. Questo evita residui Business e non sovrascrive una modifica manuale successiva.
-
-Commit Build 4 principali:
+Commit principali:
 - `fca9b990ea490ed73d46de6387e0e7b49635d4f1` — ownership Business TaskbarAl.
 - `6dd0d191d578cdc54a473f65a8a008ba4fb7b99c` — Setup gestisce entrata/uscita Business.
 - `d6ab55eb5e994acb45bbefe17ef4b9d262b5b343` — Business Start a sinistra.
@@ -55,8 +63,6 @@ Commit Build 4 principali:
 Standard/Gaming: Questo PC, File utente, Cestino; Rete e Pannello di controllo nascosti.
 Business: aggiunge Rete e Pannello di controllo.
 Le icone sono namespace Windows via `HideDesktopIcons`, non `.lnk`.
-
-Standard Build 2 riapplicato sopra Standard: PASS, incluse icone e primo smoke test idempotenza.
 
 ## Backup/Undo
 Le scritture Gaming e Business gestite dal ProfileState passano anche dal backup Registry della sessione. Gap aperti: Active Setup non completamente coperto dall'Undo; Undo servizi futuro; migliorare UX selezione sessione.
@@ -70,16 +76,5 @@ VM Windows 11 Pro build 26200, VirtualBox, ~8 GB. Primo test pulito Standard: pr
 ## Lab
 Usare `lab/Deep-Audit.ps1`, `Compare-Baseline.ps1`, `Services-Audit.ps1`, `Compare-Services.ps1` e baseline `Windows11-Pro-Clean-Before-Standard.json`. LTSC rimosso dal flusso operativo.
 
-## Test immediato Build 4
-La VM è attualmente nello stato Business ottenuto con Build 3, con Start ancora centrato e Gaming già correttamente ripristinato.
-
-1. Aggiornare a v0.1.4 Build 4.
-2. Rilanciare Business sopra Business.
-3. Verificare che Start vada a sinistra e che Rete/Pannello di controllo restino presenti.
-4. Controllare `ProfileState.json`: deve contenere Business/TaskbarAl con stato precedente e AppliedValue=0.
-5. Poi lanciare Standard sopra Business.
-6. Verificare riga `[Preset] Uscita da Business: ripristino allineamento Start precedente`.
-7. Verificare che Start torni al precedente stato centrato, Rete/Pannello di controllo spariscano e Gaming non venga toccato.
-8. Solo allora dichiarare completata la prima matrice `Standard → Gaming → Business → Standard`.
-
-Non usare ancora la build alla cieca sui PC clienti prima della chiusura del test VM.
+## Prossimo sviluppo immediato
+Conclusa la matrice preset, il prossimo lavoro è alleggerire le visualizzazioni/animazioni di Windows in modo conservativo e misurabile, senza introdurre tweak aggressivi o peggiorare accessibilità/leggibilità.
