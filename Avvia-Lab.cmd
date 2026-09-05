@@ -23,10 +23,11 @@ echo   [1] AUDIT SERVIZI - WINDOWS 11 PRO 25H2
 echo   [2] AUDIT SERVIZI - WINDOWS 11 LTSC 2024
 echo   [3] CONFRONTA ULTIMI AUDIT SERVIZI PRO vs LTSC
 echo.
-echo   [4] LTSC DEEP AUDIT - RILEVAMENTO AUTOMATICO WINDOWS
+echo   [4] DEEP AUDIT - RILEVAMENTO AUTOMATICO WINDOWS
+echo   [5] CONFRONTA ULTIMI DEEP AUDIT PRO vs LTSC
 echo.
-echo   [5] APRI CARTELLA REPORT
-echo   [6] ESCI
+echo   [6] APRI CARTELLA REPORT
+echo   [7] ESCI
 echo.
 set "scelta="
 set /p "scelta=Scelta: "
@@ -35,8 +36,9 @@ if "%scelta%"=="1" goto AUDIT_PRO
 if "%scelta%"=="2" goto AUDIT_LTSC
 if "%scelta%"=="3" goto COMPARE
 if "%scelta%"=="4" goto DEEP_AUTO
-if "%scelta%"=="5" goto REPORTS
-if "%scelta%"=="6" exit /b
+if "%scelta%"=="5" goto DEEP_COMPARE
+if "%scelta%"=="6" goto REPORTS
+if "%scelta%"=="7" exit /b
 
 echo.
 echo Scelta non valida.
@@ -81,8 +83,8 @@ goto FINE
 :DEEP_AUTO
 cls
 echo ==============================================================
-echo LTSC DEEP AUDIT - RILEVAMENTO AUTOMATICO
- echo ==============================================================
+echo DEEP AUDIT - RILEVAMENTO AUTOMATICO
+echo ==============================================================
 echo.
 echo Il test e READ-ONLY: non modifica Windows.
 echo Puo richiedere alcuni minuti.
@@ -100,6 +102,25 @@ echo Sistema rilevato: %DEEP_LABEL%
 echo Il report verra salvato con questa etichetta.
 echo.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0lab\LTSC-Deep-Audit.ps1" -Label "%DEEP_LABEL%"
+goto FINE
+
+:DEEP_COMPARE
+cls
+echo ==============================================================
+echo CONFRONTO ULTIMI DEEP AUDIT - LTSC 2024 vs PRO 25H2
+echo ==============================================================
+echo.
+echo Cerca automaticamente i report piu recenti in lab\reports.
+echo.
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$reports=Join-Path '%~dp0' 'lab\reports';" ^
+  "$l=Get-ChildItem $reports -Filter 'DeepAudit-LTSC-2024-*.json' -ErrorAction SilentlyContinue ^| Sort-Object LastWriteTime -Descending ^| Select-Object -First 1;" ^
+  "$p=Get-ChildItem $reports -Filter 'DeepAudit-PRO-25H2-*.json' -ErrorAction SilentlyContinue ^| Sort-Object LastWriteTime -Descending ^| Select-Object -First 1;" ^
+  "if(-not $l -or -not $p){Write-Host 'ERRORE: servono almeno un DeepAudit LTSC e uno PRO in lab\reports.' -ForegroundColor Red; Write-Host 'Copia i due JSON nella cartella lab\reports e riprova.' -ForegroundColor Yellow; exit 2};" ^
+  "Write-Host ('LTSC: ' + $l.Name); Write-Host ('PRO : ' + $p.Name); Write-Host '';" ^
+  "& '%~dp0lab\Compare-LTSC-Deep-Audit.ps1' -ReferencePath $l.FullName -CandidatePath $p.FullName -OutputDirectory $reports"
+
 goto FINE
 
 :REPORTS
