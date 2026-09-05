@@ -69,15 +69,7 @@ echo ==============================================================
 echo CONFRONTO ULTIMI AUDIT - LTSC 2024 vs PRO 25H2
 echo ==============================================================
 echo.
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$reports=Join-Path '%~dp0' 'lab\reports';" ^
-  "$l=Get-ChildItem $reports -Filter 'Services-LTSC-2024-*.json' -ErrorAction SilentlyContinue ^| Sort-Object LastWriteTime -Descending ^| Select-Object -First 1;" ^
-  "$p=Get-ChildItem $reports -Filter 'Services-PRO-25H2-*.json' -ErrorAction SilentlyContinue ^| Sort-Object LastWriteTime -Descending ^| Select-Object -First 1;" ^
-  "if(-not $l -or -not $p){Write-Host 'ERRORE: servono almeno un report LTSC e uno PRO in lab\reports.' -ForegroundColor Red; exit 2};" ^
-  "Write-Host ('LTSC: ' + $l.Name); Write-Host ('PRO : ' + $p.Name); Write-Host '';" ^
-  "& '%~dp0lab\Compare-Services.ps1' -ReferencePath $l.FullName -CandidatePath $p.FullName"
-
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$reports=Join-Path '%~dp0' 'lab\reports'; $l=Get-ChildItem $reports -Filter 'Services-LTSC-2024-*.json' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; $p=Get-ChildItem $reports -Filter 'Services-PRO-25H2-*.json' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if(-not $l -or -not $p){Write-Host 'ERRORE: servono almeno un report LTSC e uno PRO in lab\reports.' -ForegroundColor Red; exit 2}; Write-Host ('LTSC: ' + $l.Name); Write-Host ('PRO : ' + $p.Name); Write-Host ''; & '%~dp0lab\Compare-Services.ps1' -ReferencePath $l.FullName -CandidatePath $p.FullName"
 goto FINE
 
 :DEEP_AUTO
@@ -112,15 +104,7 @@ echo ==============================================================
 echo.
 echo Cerca automaticamente i report piu recenti in lab\reports.
 echo.
-
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$reports=Join-Path '%~dp0' 'lab\reports';" ^
-  "$l=Get-ChildItem $reports -Filter 'DeepAudit-LTSC-2024-*.json' -ErrorAction SilentlyContinue ^| Sort-Object LastWriteTime -Descending ^| Select-Object -First 1;" ^
-  "$p=Get-ChildItem $reports -Filter 'DeepAudit-PRO-25H2-*.json' -ErrorAction SilentlyContinue ^| Sort-Object LastWriteTime -Descending ^| Select-Object -First 1;" ^
-  "if(-not $l -or -not $p){Write-Host 'ERRORE: servono almeno un DeepAudit LTSC e uno PRO in lab\reports.' -ForegroundColor Red; Write-Host 'Copia i due JSON nella cartella lab\reports e riprova.' -ForegroundColor Yellow; exit 2};" ^
-  "Write-Host ('LTSC: ' + $l.Name); Write-Host ('PRO : ' + $p.Name); Write-Host '';" ^
-  "& '%~dp0lab\Compare-LTSC-Deep-Audit.ps1' -ReferencePath $l.FullName -CandidatePath $p.FullName -OutputDirectory $reports"
-
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$reports=Join-Path '%~dp0' 'lab\reports'; $l=Get-ChildItem $reports -Filter 'DeepAudit-LTSC-2024-*.json' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; $p=Get-ChildItem $reports -Filter 'DeepAudit-PRO-25H2-*.json' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if(-not $l -or -not $p){Write-Host 'ERRORE: servono almeno un DeepAudit LTSC e uno PRO in lab\reports.' -ForegroundColor Red; Write-Host 'Copia i due JSON nella cartella lab\reports e riprova.' -ForegroundColor Yellow; exit 2}; Write-Host ('LTSC: ' + $l.Name); Write-Host ('PRO : ' + $p.Name); Write-Host ''; & '%~dp0lab\Compare-LTSC-Deep-Audit.ps1' -ReferencePath $l.FullName -CandidatePath $p.FullName -OutputDirectory $reports"
 goto FINE
 
 :REPORTS
