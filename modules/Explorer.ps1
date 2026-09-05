@@ -18,46 +18,32 @@ function Invoke-TDTExplorer {
         Set-TDTUserDword -RelativePath $relative -Name 'Hidden' -Value 1 -AllUsers $allUsers
     }
 
-    if ($null -ne $Config.PSObject.Properties['DesktopIconsByEdition'] -and $Config.DesktopIconsByEdition) {
-        $editionId = ''
-        try {
-            $editionId = [string](Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -Name EditionID -ErrorAction Stop).EditionID
-        }
-        catch {
-            Write-Warning "[Explorer] Impossibile rilevare EditionID: $($_.Exception.Message)"
-        }
-
-        $isProLike = $editionId -match '^(Professional|ProfessionalEducation|ProfessionalWorkstation|Enterprise|EnterpriseS|Education|Server)'
-        $editionLabel = if ($isProLike) { 'Pro/Business' } else { 'Home/Consumer' }
-        Write-Host "[Explorer] Icone desktop: profilo $editionLabel (EditionID: $editionId)" -ForegroundColor DarkGray
-
-        $baseIcons = [ordered]@{
-            '{20D04FE0-3AEA-1069-A2D8-08002B30309D}' = 'Questo PC'
-            '{59031A47-3F72-44A7-89C5-5595FE6B30EE}' = 'File utente'
-            '{645FF040-5081-101B-9F08-00AA002F954E}' = 'Cestino'
-        }
-        $proIcons = [ordered]@{
-            '{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}' = 'Rete'
-            '{5399E694-6CE5-4D6C-8FCE-1D8870FDCBA0}' = 'Pannello di controllo'
-        }
-
-        $icons = [ordered]@{}
-        foreach ($entry in $baseIcons.GetEnumerator()) { $icons[$entry.Key] = $entry.Value }
-        if ($isProLike) {
-            foreach ($entry in $proIcons.GetEnumerator()) { $icons[$entry.Key] = $entry.Value }
-        }
-
+    if ($null -ne $Config.PSObject.Properties['DesktopIcons'] -and $null -ne $Config.DesktopIcons) {
         $desktopIconPaths = @(
             'Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel',
             'Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu'
         )
+        $knownIcons = [ordered]@{
+            ThisPC       = @{ Guid = '{20D04FE0-3AEA-1069-A2D8-08002B30309D}'; Label = 'Questo PC' }
+            UserFiles    = @{ Guid = '{59031A47-3F72-44A7-89C5-5595FE6B30EE}'; Label = 'File utente' }
+            RecycleBin   = @{ Guid = '{645FF040-5081-101B-9F08-00AA002F954E}'; Label = 'Cestino' }
+            Network      = @{ Guid = '{F02C1A0D-BE21-4350-88B0-7367FC96EF3C}'; Label = 'Rete' }
+            ControlPanel = @{ Guid = '{5399E694-6CE5-4D6C-8FCE-1D8870FDCBA0}'; Label = 'Pannello di controllo' }
+        }
 
-        foreach ($icon in $icons.GetEnumerator()) {
-            if ($PSCmdlet.ShouldProcess('Desktop', "Mostrare icona $($icon.Value)")) {
+        foreach ($iconName in $knownIcons.Keys) {
+            $property = $Config.DesktopIcons.PSObject.Properties[$iconName]
+            if ($null -eq $property) { continue }
+            $show = [bool]$property.Value
+            $icon = $knownIcons[$iconName]
+            $action = if ($show) { "Mostrare icona $($icon.Label)" } else { "Nascondere icona $($icon.Label)" }
+            if ($PSCmdlet.ShouldProcess('Desktop', $action)) {
+                $value = if ($show) { 0 } else { 1 }
                 foreach ($desktopPath in $desktopIconPaths) {
-                    Set-TDTUserDword -RelativePath $desktopPath -Name $icon.Key -Value 0 -AllUsers $allUsers
+                    Set-TDTUserDword -RelativePath $desktopPath -Name $icon.Guid -Value $value -AllUsers $allUsers
                 }
             }
         }
+        Write-Host '[Explorer] Icone desktop applicate secondo il preset selezionato.' -ForegroundColor DarkGray
     }
 }
