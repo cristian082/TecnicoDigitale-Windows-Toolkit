@@ -1,73 +1,62 @@
 # Strumenti Tecnico
 
-`Strumenti-Tecnico.ps1` carica `modules/TechnicianTools.ps1` e apre un menu separato dai preset. Gli strumenti sono pensati per assistenza tecnica su PC Windows 11 sconosciuti: diagnostica prima, azioni di riparazione solo esplicite e confermate.
+`Strumenti-Tecnico.ps1` carica gli strumenti operativi e il catalogo offline `Comandi del tecnico`. Obiettivo: assistenza su PC Windows 11 sconosciuti senza dover ricordare o cercare sul Web i comandi ricorrenti.
 
 ## Regole di sicurezza
-
 - Nessuno strumento disabilita Defender, Firewall, UAC o Windows Update.
-- Nessuno strumento modifica tipi di avvio dei servizi in massa.
-- Le funzioni di analisi non rimuovono driver, processi, software o file utente.
-- Le operazioni che interrompono temporaneamente servizi, cancellano code o riparano componenti richiedono conferma.
-- Nessun riavvio viene eseguito automaticamente.
-- I comandi DISM/SFC/CHKDSK usano gli strumenti Microsoft inclusi in Windows.
+- Nessun mass-disable di servizi.
+- Le analisi non rimuovono software, driver o file utente.
+- Le azioni operative sensibili richiedono conferma.
+- Nessun riavvio automatico.
 
-## Menu principale
+## Strumenti operativi
+TECH-NET-001 — rete: diagnostica, DNS e adattatori.
+TECH-WU-001 — Windows Update: stato, ricerca e riparazione cache esplicita.
+TECH-REPAIR-001 — DISM/SFC.
+TECH-DISK-001 — dischi/SMART/CHKDSK scan.
+TECH-PRINT-001 — stampanti/spooler.
+TECH-SVC-001 — servizi senza modifiche massive.
+TECH-DRV-001 — driver/PnP.
+TECH-STARTUP-001 — startup read-only.
+TECH-EVENT-001 — errori/critici recenti.
+TECH-BITLOCKER-001 — stato BitLocker senza chiavi.
+TECH-SPACE-001 — spazio disco/TEMP read-only.
+TECH-PROC-001 — triage processi read-only.
 
-### TECH-NET-001 — Rete
-Comprende diagnostica rapida, diagnostica avanzata, flush DNS, cambio DNS e riavvio esplicito di una scheda. La diagnostica avanzata mostra adattatori, configurazione IP, profili rete, route predefinite, proxy WinHTTP e prime porte TCP in ascolto.
+## TECH-CMD-001 — Comandi del tecnico / catalogo offline
+Build 9 introduce un prontuario interattivo separato dalla logica degli strumenti.
 
-Rischio: basso. Il cambio DNS e il riavvio della scheda modificano temporaneamente la connettivita e sono azioni volontarie.
+File:
+- `data/TechnicianCommands.json`: catalogo dati estendibile.
+- `modules/CommandReference.ps1`: UI, ricerca, schede, copia ed esecuzione.
 
-### TECH-WU-001 — Windows Update
-Mostra stato dei servizi Windows Update/BITS/UsoSvc/CryptSvc, presenza di riavvio pendente e ultimi hotfix. La ricerca aggiornamenti usa Windows Update Agent e non installa automaticamente nulla.
+Ogni voce contiene ID stabile, categoria, titolo, comando, quando serve, quando non serve/attenzioni, impatto, necessita amministratore, necessita riavvio e parole chiave.
 
-La riparazione cache ferma temporaneamente BITS, Windows Update e CryptSvc, rinomina `SoftwareDistribution` e `catroot2`, quindi riavvia i servizi. Non modifica policy Windows Update.
+Funzioni disponibili:
+- navigazione per categoria;
+- ricerca offline per problema/parole chiave;
+- scheda descrittiva prima dell'azione;
+- copia negli appunti;
+- esecuzione volontaria con conferma;
+- blocco dell'esecuzione diretta se il comando contiene segnaposto come `<PID>`.
 
-Rischio: medio solo per la riparazione cache; richiede conferma.
+Categorie iniziali: Windows/riparazione, rete/DNS, stampanti, dischi, driver, utenti, servizi/processi, Windows Update, boot/BCD, SMB/RDP, energia/batteria, app/Winget, BitLocker, log, Firewall e informazioni PC.
 
-### TECH-REPAIR-001 — Integrita Windows / DISM / SFC
-Azioni disponibili:
-- `DISM /Online /Cleanup-Image /CheckHealth`
-- `DISM /Online /Cleanup-Image /ScanHealth`
-- `DISM /Online /Cleanup-Image /RestoreHealth`
-- `SFC /scannow`
-- sequenza completa RestoreHealth + SFC.
+Il catalogo iniziale contiene circa 50 comandi realmente utili. Non deve diventare una raccolta indiscriminata: aggiungere solo comandi tecnicamente giustificabili e documentare le avvertenze.
 
-CheckHealth/ScanHealth sono diagnostici; RestoreHealth/SFC possono modificare file/componenti Windows corrotti e richiedono conferma. Nessun riavvio automatico.
-
-### TECH-DISK-001 — Dischi / SMART / CHKDSK
-Mostra `Get-PhysicalDisk`, stato salute, tipo bus/media e, se il controller li espone, contatori di affidabilita/SMART. Fallback CIM se Storage Spaces non espone i dischi.
-
-`CHKDSK /scan` viene eseguito solo sul volume scelto dal tecnico e non pianifica automaticamente correzioni offline.
-
-### TECH-PRINT-001 — Stampanti
-Mostra stampanti, driver, porte e stato Spooler. Il reset Spooler elimina i job presenti nella coda e richiede conferma.
-
-### TECH-SVC-001 — Servizi
-Mostra lo stato di servizi importanti e i servizi con StartType Automatic attualmente fermi. Non presume che ogni Automatico fermo sia un errore, perche alcuni servizi sono trigger-start.
-
-Permette di riavviare un singolo servizio digitandone esplicitamente il nome e confermando. Non modifica StartType.
-
-### TECH-DRV-001 — Driver / dispositivi
-Mostra dispositivi PnP con stato diverso da OK e un riepilogo dei driver firmati piu recenti. La scansione PnP usa `pnputil /scan-devices` e non rimuove driver.
-
-### TECH-STARTUP-001 — Avvio automatico
-Sola analisi. Mostra `Win32_StartupCommand` e fino a 30 attivita pianificate con trigger Logon. Nessun elemento viene disabilitato automaticamente.
-
-### TECH-EVENT-001 — Eventi Windows
-Sola analisi. Mostra eventi Critici/Errori delle ultime 24 ore dai log System e Application, fino a 30 per log.
-
-### TECH-BITLOCKER-001 — BitLocker
-Sola analisi. Mostra stato cifratura/protezione tramite `Get-BitLockerVolume` o fallback `manage-bde -status`. Non mostra, esporta o modifica chiavi di ripristino.
-
-### TECH-SPACE-001 — Spazio disco
-Sola analisi. Mostra capacita, spazio libero e percentuale libera dei volumi; calcola una stima delle cartelle TEMP dell'utente e di Windows. Non cancella file.
-
-### TECH-PROC-001 — Triage processi
-Sola analisi. Assegna indicatori elementari in base a firma digitale, percorso TEMP/AppData e presenza all'avvio. Un punteggio non equivale a malware. Nessun processo viene terminato o cancellato.
+### Sicurezza del prontuario
+La presenza di un comando nel catalogo non significa che sia sicuro in qualsiasi contesto. I comandi a impatto MEDIO/ALTO mostrano l'avvertenza prima dell'esecuzione. Le operazioni distruttive o non coerenti con la filosofia del Toolkit non devono essere aggiunte solo per completezza.
 
 ## Compatibilita e test
+Target: Windows 11, Windows PowerShell 5.1, esecuzione amministrativa. Alcune informazioni dipendono da hardware, driver ed edizione.
 
-Target: Windows 11, Windows PowerShell 5.1, esecuzione amministrativa. Alcune informazioni (SMART dettagliato, BitLocker cmdlet, PnP) dipendono da hardware, driver ed edizione Windows; in caso di dati non esposti il tool deve degradare in modo sicuro mostrando informazioni parziali o un avviso.
-
-Prima dell'uso su PC cliente, testare la build in VM almeno su: apertura di ogni sottomenu, funzioni read-only, annullamento delle conferme e una sequenza controllata DISM/SFC/Windows Update cache su snapshot sacrificabile.
+Build 9 da testare in VM:
+1. apertura `Strumenti-Tecnico.ps1`;
+2. voce 13 `Comandi del tecnico`;
+3. caricamento JSON e conteggio catalogo;
+4. navigazione di almeno tre categorie;
+5. ricerca `stampante`, `wifi`, `boot`, `disco`;
+6. copia comando;
+7. esecuzione di un comando read-only (es. `ipconfig /all`);
+8. verifica che `tasklist /fi "PID eq <PID>"` non venga eseguito direttamente;
+9. annullamento di un comando MEDIO/ALTO.
