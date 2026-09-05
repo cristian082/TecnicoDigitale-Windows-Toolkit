@@ -22,7 +22,8 @@ Consulta l'[indice della documentazione](docs/README.md).
 | Privacy | Riduce suggerimenti e contenuti promozionali selezionati | Sì |
 | Start/Taskbar | Configura Widget, ricerca e barra delle applicazioni | Sì |
 | Gaming | Applica solo opzioni gaming conservative | Sì |
-| Software | Installa il software previsto dal preset | Sì |
+| Debloat | Rimuove solo pacchetti esplicitamente previsti dal profilo | Sì |
+| Software | Installa solo i programmi scelti manualmente, separatamente dai preset | Sì |
 | Undo | Ripristina le modifiche registrate dal sistema di backup | Sì |
 
 ## Documentazione delle singole funzioni
@@ -33,17 +34,10 @@ La documentazione dettagliata è divisa per area:
 - [Privacy](docs/Privacy.md)
 - [Start e Taskbar](docs/Start-Taskbar.md)
 - [Gaming](docs/Gaming.md)
+- [Software](docs/Software.md)
 - [Studio dei servizi Windows](docs/Services.md)
 
 Ogni nuova modifica dovrà essere accompagnata dalla propria scheda tecnica e funzionale.
-
-## Servizi Windows e confronto LTSC
-
-Il progetto sta studiando Windows 11 Enterprise LTSC 2024 come riferimento tecnico, senza cercare di trasformare Windows Pro in LTSC tramite disattivazioni indiscriminate.
-
-Lo strumento di laboratorio `lab/Services-Audit.ps1` fotografa la configurazione dei servizi senza modificarli. Le baseline di Windows 11 Pro e LTSC vengono confrontate prima di approvare qualsiasi intervento.
-
-Un servizio presente o configurato come Manuale non viene considerato automaticamente uno spreco di risorse. Il Toolkit preferisce lasciare a Windows il comportamento trigger/on-demand quando non esiste un beneficio concreto nel modificarlo.
 
 ## Preset
 
@@ -54,6 +48,16 @@ Sono previsti tre profili principali:
 - **Business** — configurazione sobria per postazioni professionali.
 
 I preset sono file JSON nella cartella `presets/`.
+
+**I preset non installano software.** Questo rende gli interventi più prevedibili sui PC dei clienti e permette test BEFORE/AFTER puliti, senza confondere le ottimizzazioni Windows con processi, servizi, task o elementi di avvio aggiunti da applicazioni appena installate.
+
+## Installazione software
+
+Dal launcher `Avvia-Toolkit.cmd` è disponibile la voce **INSTALLA SOFTWARE**.
+
+`Installa-Software.ps1` permette di selezionare singolarmente i programmi desiderati oppure usare selezioni rapide per PC nuovo o gaming. L'installazione effettiva è gestita da `modules/Software.ps1` tramite winget.
+
+L'installazione software è volontaria e separata da Standard/Gaming/Business.
 
 ## Avvio
 
@@ -80,9 +84,21 @@ Il sistema Undo è ancora in sviluppo: non tutte le categorie di intervento sono
 
 ## Diagnostica
 
-`modules/Diagnostics.ps1` esegue un check-up in sola lettura e produce un report in `reports/`. L'obiettivo è arrivare a una valutazione tecnica prima delle modifiche e, successivamente, a un confronto prima/dopo.
+`modules/Diagnostics.ps1` esegue un check-up in sola lettura e produce un report in `reports/`. L'obiettivo è arrivare a una valutazione tecnica prima delle modifiche e a un confronto prima/dopo.
 
 Tra le aree già analizzate o in sviluppo: Windows, CPU, RAM, dischi, TRIM, avvio, Defender, Firewall, UAC, BitLocker e stato/canale delle licenze Windows e Office.
+
+## Baseline e laboratorio
+
+La direzione del laboratorio è il confronto fra una **baseline Windows 11 Pro pulita** e lo stato della macchina dopo un intervento.
+
+La baseline non è un'immagine da imporre ai PC dei clienti: è un riferimento diagnostico. Un computer reale può avere legittimamente Office, stampanti, VPN, gestionali, driver, servizi e software professionali diversi dalla macchina di riferimento.
+
+La baseline iniziale è conservata in:
+
+`lab/baselines/Windows11-Pro-Clean-Before-Standard.json`
+
+La precedente ricerca Pro vs LTSC resta utile come studio storico, soprattutto perché ha mostrato che non esiste una giustificazione per disabilitare servizi Windows in massa. Il lavoro futuro del laboratorio è orientato a confronti BEFORE/AFTER e alla rilevazione di regressioni.
 
 ## Filosofia
 
@@ -92,7 +108,17 @@ Quando una funzione Windows è già on-demand e non produce un consumo significa
 
 ## Stato del progetto
 
-Il Toolkit è in sviluppo e viene testato inizialmente in macchine virtuali pulite prima dell'uso su PC reali. Il laboratorio include confronti fra installazioni stock e test di idempotenza/ripristino.
+Il Toolkit è in sviluppo e viene testato inizialmente in macchine virtuali pulite prima dell'uso su PC reali.
+
+Per misurare un preset in modo corretto il flusso di test è:
+
+1. snapshot/baseline pulita;
+2. esecuzione del solo preset;
+3. riavvio;
+4. audit AFTER;
+5. confronto BEFORE/AFTER;
+6. controllo delle regressioni;
+7. eventuale installazione software solo successivamente.
 
 Prima dell'uso su macchine di produzione è consigliata la modalità `-WhatIf` e la verifica del preset scelto.
 
