@@ -16,14 +16,18 @@ if %errorlevel% neq 0 (
 cls
 echo ==============================================================
 echo       TECNICO DIGITALE - TEST LAB
- echo                Toolkit v%TDT_VERSION%
+echo                Toolkit v%TDT_VERSION%
 echo ==============================================================
 echo.
 echo   [1] AUDIT SERVIZI - WINDOWS 11 PRO 25H2
 echo   [2] AUDIT SERVIZI - WINDOWS 11 LTSC 2024
-echo   [3] CONFRONTA ULTIMI AUDIT PRO vs LTSC
-echo   [4] APRI CARTELLA REPORT
-echo   [5] ESCI
+echo   [3] CONFRONTA ULTIMI AUDIT SERVIZI PRO vs LTSC
+echo.
+echo   [4] LTSC DEEP AUDIT - WINDOWS 11 PRO 25H2
+echo   [5] LTSC DEEP AUDIT - WINDOWS 11 LTSC 2024
+echo.
+echo   [6] APRI CARTELLA REPORT
+echo   [7] ESCI
 echo.
 set "scelta="
 set /p "scelta=Scelta: "
@@ -31,8 +35,10 @@ set /p "scelta=Scelta: "
 if "%scelta%"=="1" goto AUDIT_PRO
 if "%scelta%"=="2" goto AUDIT_LTSC
 if "%scelta%"=="3" goto COMPARE
-if "%scelta%"=="4" goto REPORTS
-if "%scelta%"=="5" exit /b
+if "%scelta%"=="4" goto DEEP_PRO
+if "%scelta%"=="5" goto DEEP_LTSC
+if "%scelta%"=="6" goto REPORTS
+if "%scelta%"=="7" exit /b
 
 echo.
 echo Scelta non valida.
@@ -72,6 +78,30 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
   "Write-Host ('LTSC: ' + $l.Name); Write-Host ('PRO : ' + $p.Name); Write-Host '';" ^
   "& '%~dp0lab\Compare-Services.ps1' -ReferencePath $l.FullName -CandidatePath $p.FullName"
 
+goto FINE
+
+:DEEP_PRO
+cls
+echo ==============================================================
+echo LTSC DEEP AUDIT - PRO 25H2
+echo ==============================================================
+echo.
+echo Il test e READ-ONLY: non modifica Windows.
+echo Puo richiedere alcuni minuti.
+echo.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0lab\LTSC-Deep-Audit.ps1" -Label "PRO-25H2"
+goto FINE
+
+:DEEP_LTSC
+cls
+echo ==============================================================
+echo LTSC DEEP AUDIT - LTSC 2024
+echo ==============================================================
+echo.
+echo Il test e READ-ONLY: non modifica Windows.
+echo Puo richiedere alcuni minuti.
+echo.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0lab\LTSC-Deep-Audit.ps1" -Label "LTSC-2024"
 goto FINE
 
 :REPORTS
