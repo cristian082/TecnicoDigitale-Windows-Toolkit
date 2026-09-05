@@ -21,6 +21,7 @@ Il Toolkit privilegia modifiche conservative e comprensibili. Un servizio o un c
 - [Privacy](Privacy.md) — suggerimenti, contenuti promozionali e ID pubblicitario.
 - [Start e Taskbar](Start-Taskbar.md) — Widget, ricerca e barra delle applicazioni.
 - [Gaming](Gaming.md) — Game Mode e Game DVR.
+- [Software](Software.md) — installazione selettiva separata dai preset di ottimizzazione.
 - [Services](Services.md) — metodologia di studio e classificazione dei servizi Windows.
 
 La documentazione verrà estesa insieme ai moduli: ogni nuova modifica deve essere accompagnata dalla relativa spiegazione.
