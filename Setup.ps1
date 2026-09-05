@@ -25,7 +25,7 @@ $presetPath = Join-Path $Root "presets\$Preset.json"
 if (-not (Test-Path $presetPath)) { throw "Preset non trovato: $presetPath" }
 $config = Get-Content $presetPath -Raw | ConvertFrom-Json
 
-$moduleOrder = @('Version','Backup','Common','ProfileState','Diagnostics','Restore','Privacy','Explorer','Start-Taskbar','Debloat','Gaming')
+$moduleOrder = @('Version','Backup','Common','ProfileState','Diagnostics','Restore','Privacy','Explorer','Start-Taskbar','VisualEffects','Debloat','Gaming')
 foreach ($module in $moduleOrder) {
     $path = Join-Path $Root "modules\$module.ps1"
     if (-not (Test-Path $path)) { throw "Modulo mancante: $path" }
@@ -49,6 +49,7 @@ try {
     if ($config.Privacy.Enabled) { Invoke-TDTPrivacy -Config $config.Privacy -WhatIf:$WhatIfPreference }
     if ($config.Explorer.Enabled) { Invoke-TDTExplorer -Config $config.Explorer -WhatIf:$WhatIfPreference }
     if ($config.StartTaskbar.Enabled) { Invoke-TDTStartTaskbar -Config $config.StartTaskbar -WhatIf:$WhatIfPreference }
+    if ($null -ne $config.PSObject.Properties['VisualEffects'] -and $config.VisualEffects.Enabled) { Invoke-TDTVisualEffects -Config $config.VisualEffects -WhatIf:$WhatIfPreference }
     if ($config.Debloat.Enabled) { Invoke-TDTDebloat -Config $config.Debloat -WhatIf:$WhatIfPreference }
     if ($config.Gaming.Enabled) { Invoke-TDTGaming -Config $config.Gaming -Root $Root -WhatIf:$WhatIfPreference }
 
