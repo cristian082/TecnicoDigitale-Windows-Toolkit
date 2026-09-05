@@ -79,7 +79,7 @@ function Restore-TDTOwnedRegistryEntries {
             $remaining += $entry
         }
     }
-    return ,$remaining
+    return $remaining
 }
 
 function Restore-TDTGamingOwnership {
