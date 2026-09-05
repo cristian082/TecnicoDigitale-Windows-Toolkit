@@ -1,44 +1,246 @@
 [CmdletBinding()]
 param(
- [string]$BaselinePath=(Join-Path $PSScriptRoot 'baselines\Windows11-Pro-Clean-Before-Standard.json'),
- [Parameter(Mandatory=$true)][string]$CurrentPath,
- [string]$OutputDirectory=(Join-Path $PSScriptRoot 'reports')
+    [string]$BaselinePath = (Join-Path $PSScriptRoot 'baselines\Windows11-Pro-Clean-Before-Standard.json'),
+    [Parameter(Mandatory = $true)]
+    [string]$CurrentPath,
+    [string]$OutputDirectory = (Join-Path $PSScriptRoot 'reports')
 )
-Set-StrictMode -Version 2.0;$ErrorActionPreference='Stop'
-if(!(Test-Path -LiteralPath $BaselinePath)){throw "Baseline non trovata: $BaselinePath"};if(!(Test-Path -LiteralPath $CurrentPath)){throw "Audit corrente non trovato: $CurrentPath"}
-$b=Get-Content -LiteralPath $BaselinePath -Raw -Encoding UTF8|ConvertFrom-Json;$c=Get-Content -LiteralPath $CurrentPath -Raw -Encoding UTF8|ConvertFrom-Json
-if(!(Test-Path $OutputDirectory)){New-Item -ItemType Directory $OutputDirectory -Force|Out-Null}
-function P($o,$n,$d=$null){if($null-eq$o){return$d};$p=$o.PSObject.Properties[$n];if($null-eq$p){return$d};$p.Value}
-function NormSvc([string]$n){if(!$n){return''};$n-replace'_[0-9A-Fa-f]{5,}$','_*'}
-function NormStart([string]$n){if(!$n){return''};$n-replace'MicrosoftEdgeAutoLaunch_[A-Fa-f0-9]+','MicrosoftEdgeAutoLaunch_{HASH}'}
+
+Set-StrictMode -Version 2.0
+$ErrorActionPreference = 'Stop'
+
+function Get-Prop {
+    param($Object, [string]$Name, $Default = $null)
+    if ($null -eq $Object) { return $Default }
+    $p = $Object.PSObject.Properties[$Name]
+    if ($null -eq $p) { return $Default }
+    return $p.Value
+}
+
+function Normalize-ServiceName {
+    param([string]$Name)
+    if ([string]::IsNullOrWhiteSpace($Name)) { return '' }
+    return ($Name -replace '_[0-9A-Fa-f]{5,}$', '_*')
+}
+
+function Normalize-StartupName {
+    param([string]$Name)
+    if ([string]::IsNullOrWhiteSpace($Name)) { return '' }
+    return ($Name -replace 'MicrosoftEdgeAutoLaunch_[A-Fa-f0-9]+', 'MicrosoftEdgeAutoLaunch_{HASH}')
+}
+
+if (-not (Test-Path -LiteralPath $BaselinePath -PathType Leaf)) {
+    throw "Baseline non trovata: $BaselinePath"
+}
+if (-not (Test-Path -LiteralPath $CurrentPath -PathType Leaf)) {
+    throw "Audit corrente non trovato: $CurrentPath"
+}
+if (-not (Test-Path -LiteralPath $OutputDirectory -PathType Container)) {
+    New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
+}
+
+$baseline = Get-Content -LiteralPath $BaselinePath -Raw -Encoding UTF8 | ConvertFrom-Json
+$current  = Get-Content -LiteralPath $CurrentPath  -Raw -Encoding UTF8 | ConvertFrom-Json
+
 Write-Host '=============================================================='
 Write-Host ' TECNICO DIGITALE - BASELINE vs SISTEMA ATTUALE' -ForegroundColor Cyan
 Write-Host '=============================================================='
-Write-Host "Baseline : $($b.BaselineType) / Build $($b.Windows.BuildNumber)"
-Write-Host "Attuale  : $($c.Windows.Caption) / Build $($c.Windows.BuildNumber)"
-if([string]$b.Windows.BuildNumber-ne[string]$c.Windows.BuildNumber){Write-Warning 'Build Windows diversa dalla baseline: interpretare i delta con cautela.'}
-$metrics=@('ProcessCount','TotalWorkingSetMB','TotalPrivateMemoryMB','PhysicalMemoryUsedMB','PhysicalMemoryFreeMB','EnabledScheduledTasks','InstalledAppxCount','ProvisionedAppxCount','EnabledFeatureCount','InstalledCapabilityCount','StartupItemCount','RunningServiceCount','EdgeWebViewProcessCount','EdgeWebViewWorkingSetMB')
-$rows=@();foreach($m in $metrics){$x=P $b.Snapshot $m;$y=P $c.Snapshot $m;$d=$null;try{$d=[math]::Round([double]$y-[double]$x,2)}catch{};$rows+=[pscustomobject]@{Metrica=$m;Baseline=$x;Attuale=$y;Delta=$d}}
-Write-Host '';Write-Host 'IMPATTO MISURATO' -ForegroundColor Cyan;$rows|Format-Table -AutoSize|Out-Host
-# Process counts
-$bc=@{};foreach($p in $b.ProcessCounts.PSObject.Properties){$bc[$p.Name]=[int]$p.Value};$cc=@{};foreach($g in @($c.Processes|Group-Object Name)){$cc[$g.Name]=[int]$g.Count}
-$proc=@();foreach($k in @($bc.Keys+$cc.Keys|Sort-Object -Unique)){$x=if($bc.ContainsKey($k)){$bc[$k]}else{0};$y=if($cc.ContainsKey($k)){$cc[$k]}else{0};if($x-ne$y){$proc+=[pscustomobject]@{Nome=$k;Baseline=$x;Attuale=$y;Delta=$y-$x}}}
-Write-Host 'PROCESSI CON CONTEGGIO DIVERSO' -ForegroundColor Cyan;if($proc.Count){$proc|Sort-Object Delta,Nome|Format-Table -AutoSize|Out-Host}else{Write-Host '(nessuno)'}
-# Provisioned AppX
-$bp=@($b.AppxProvisionedNames);$cp=@($c.AppxProvisioned|ForEach-Object{$_.DisplayName});$removed=@($bp|Where-Object{$_-notin$cp}|Sort-Object);$added=@($cp|Where-Object{$_-notin$bp}|Sort-Object)
-Write-Host 'APPX PROVISIONED RIMOSSE' -ForegroundColor Cyan;if($removed.Count){$removed|ForEach-Object{Write-Host "  - $_"}}else{Write-Host '  (nessuna)'}
-Write-Host 'APPX PROVISIONED AGGIUNTE' -ForegroundColor Cyan;if($added.Count){$added|ForEach-Object{Write-Host "  + $_"}}else{Write-Host '  (nessuna)'}
-# Startup conceptual comparison
-$bs=@($b.StartupItems|ForEach-Object{NormStart $_.Name});$cs=@($c.StartupItems|ForEach-Object{NormStart $_.Name});$bsu=@($bs|Sort-Object -Unique);$csu=@($cs|Sort-Object -Unique);$sr=@($bsu|Where-Object{$_-notin$csu});$sa=@($csu|Where-Object{$_-notin$bsu})
-Write-Host 'STARTUP - DIFFERENZE' -ForegroundColor Cyan;if(!$sr.Count-and!$sa.Count){Write-Host '  (nessuna differenza concettuale)'}else{$sr|ForEach-Object{Write-Host "  rimosso: $_"};$sa|ForEach-Object{Write-Host "  aggiunto: $_"}}
-# Service start modes vs compact baseline
-$bm=@{};foreach($p in $b.NonManualServiceStartModes.PSObject.Properties){$bm[$p.Name]=[string]$p.Value};$cm=@{};foreach($s in $c.Services){$n=NormSvc $s.Name;if($s.StartMode-ne'Manual'){$cm[$n]=[string]$s.StartMode}}
-$svc=@();foreach($k in @($bm.Keys+$cm.Keys|Sort-Object -Unique)){$x=if($bm.ContainsKey($k)){$bm[$k]}else{'Manual/Absent'};$y=if($cm.ContainsKey($k)){$cm[$k]}else{'Manual/Absent'};if($x-ne$y){$svc+=[pscustomobject]@{Servizio=$k;Baseline=$x;Attuale=$y}}
-Write-Host 'SERVIZI - START MODE DIFFERENTE' -ForegroundColor Cyan;if($svc.Count){$svc|Format-Table -AutoSize|Out-Host}else{Write-Host '  (nessuna differenza)'}
-# Installed programs informational
-$bn=@($b.InstalledPrograms|ForEach-Object{$_.Name});$cn=@($c.InstalledPrograms|ForEach-Object{$_.DisplayName});$pa=@($cn|Where-Object{$_-notin$bn}|Sort-Object -Unique);$pr=@($bn|Where-Object{$_-notin$cn}|Sort-Object -Unique)
-Write-Host 'SOFTWARE DIFFERENTE DALLA BASELINE (INFORMATIVO)' -ForegroundColor Cyan;$pr|ForEach-Object{Write-Host "  rimosso: $_"};$pa|ForEach-Object{Write-Host "  aggiunto: $_"};if(!$pr.Count-and!$pa.Count){Write-Host '  (nessuno)'}
-$stamp=Get-Date -Format 'yyyyMMdd-HHmmss';$out=Join-Path $OutputDirectory "BaselineCompare-$stamp.json"
-[ordered]@{GeneratedAt=(Get-Date).ToString('s');Baseline=$BaselinePath;Current=$CurrentPath;Snapshot=$rows;ProcessDifferences=$proc;ProvisionedAppxRemoved=$removed;ProvisionedAppxAdded=$added;StartupRemoved=$sr;StartupAdded=$sa;ServiceStartModeDifferences=$svc;ProgramsRemoved=$pr;ProgramsAdded=$pa}|ConvertTo-Json -Depth 6|Set-Content $out -Encoding UTF8
-Write-Host '';Write-Host "Report confronto: $out" -ForegroundColor Green
-Write-Host 'Nota: RAM/processi sono snapshot runtime; AppX, startup e start mode servizi sono differenze strutturali.' -ForegroundColor DarkGray
+Write-Host ("Baseline : {0} / Build {1}" -f $baseline.BaselineType, $baseline.Windows.BuildNumber)
+Write-Host ("Attuale  : {0} / Build {1}" -f $current.Windows.Caption, $current.Windows.BuildNumber)
+Write-Host ''
+
+if ([string]$baseline.Windows.BuildNumber -ne [string]$current.Windows.BuildNumber) {
+    Write-Warning 'Build Windows diversa dalla baseline: interpretare i delta con cautela.'
+}
+
+$metrics = @(
+    'ProcessCount',
+    'TotalWorkingSetMB',
+    'TotalPrivateMemoryMB',
+    'PhysicalMemoryUsedMB',
+    'PhysicalMemoryFreeMB',
+    'EnabledScheduledTasks',
+    'InstalledAppxCount',
+    'ProvisionedAppxCount',
+    'EnabledFeatureCount',
+    'InstalledCapabilityCount',
+    'StartupItemCount',
+    'RunningServiceCount',
+    'EdgeWebViewProcessCount',
+    'EdgeWebViewWorkingSetMB'
+)
+
+$rows = @()
+foreach ($metric in $metrics) {
+    $before = Get-Prop $baseline.Snapshot $metric
+    $after  = Get-Prop $current.Snapshot $metric
+    $delta = $null
+    try {
+        $delta = [math]::Round(([double]$after - [double]$before), 2)
+    }
+    catch { }
+
+    $rows += [pscustomobject]@{
+        Metrica  = $metric
+        Baseline = $before
+        Attuale  = $after
+        Delta    = $delta
+    }
+}
+
+Write-Host 'IMPATTO MISURATO' -ForegroundColor Cyan
+$rows | Format-Table -AutoSize | Out-Host
+
+# Processi: confronto per nome/conteggio, ignorando i PID.
+$baselineCounts = @{}
+foreach ($p in $baseline.ProcessCounts.PSObject.Properties) {
+    $baselineCounts[$p.Name] = [int]$p.Value
+}
+
+$currentCounts = @{}
+foreach ($group in @($current.Processes | Group-Object Name)) {
+    $currentCounts[$group.Name] = [int]$group.Count
+}
+
+$processDifferences = @()
+$processKeys = @($baselineCounts.Keys + $currentCounts.Keys | Sort-Object -Unique)
+foreach ($key in $processKeys) {
+    if ($baselineCounts.ContainsKey($key)) { $before = $baselineCounts[$key] } else { $before = 0 }
+    if ($currentCounts.ContainsKey($key))  { $after  = $currentCounts[$key]  } else { $after  = 0 }
+
+    if ($before -ne $after) {
+        $processDifferences += [pscustomobject]@{
+            Nome     = $key
+            Baseline = $before
+            Attuale  = $after
+            Delta    = ($after - $before)
+        }
+    }
+}
+
+Write-Host 'PROCESSI CON CONTEGGIO DIVERSO' -ForegroundColor Cyan
+if ($processDifferences.Count -gt 0) {
+    $processDifferences | Sort-Object Delta, Nome | Format-Table -AutoSize | Out-Host
+}
+else {
+    Write-Host '  (nessuno)'
+}
+
+# AppX provisioned.
+$baselineProvisioned = @($baseline.AppxProvisionedNames)
+$currentProvisioned = @(
+    $current.AppxProvisioned | ForEach-Object { Get-Prop $_ 'DisplayName' '' }
+)
+
+$removedProvisioned = @($baselineProvisioned | Where-Object { $_ -notin $currentProvisioned } | Sort-Object)
+$addedProvisioned   = @($currentProvisioned  | Where-Object { $_ -notin $baselineProvisioned } | Sort-Object)
+
+Write-Host 'APPX PROVISIONED RIMOSSE' -ForegroundColor Cyan
+if ($removedProvisioned.Count -gt 0) {
+    $removedProvisioned | ForEach-Object { Write-Host ("  - {0}" -f $_) }
+}
+else { Write-Host '  (nessuna)' }
+
+Write-Host 'APPX PROVISIONED AGGIUNTE' -ForegroundColor Cyan
+if ($addedProvisioned.Count -gt 0) {
+    $addedProvisioned | ForEach-Object { Write-Host ("  + {0}" -f $_) }
+}
+else { Write-Host '  (nessuna)' }
+
+# Startup: confronto concettuale normalizzando l'hash Edge.
+$baselineStartup = @(
+    $baseline.StartupItems | ForEach-Object { Normalize-StartupName (Get-Prop $_ 'Name' '') }
+)
+$currentStartup = @(
+    $current.StartupItems | ForEach-Object { Normalize-StartupName (Get-Prop $_ 'Name' '') }
+)
+
+$baselineStartupUnique = @($baselineStartup | Sort-Object -Unique)
+$currentStartupUnique  = @($currentStartup  | Sort-Object -Unique)
+$startupRemoved = @($baselineStartupUnique | Where-Object { $_ -notin $currentStartupUnique })
+$startupAdded   = @($currentStartupUnique  | Where-Object { $_ -notin $baselineStartupUnique })
+
+Write-Host 'STARTUP - DIFFERENZE' -ForegroundColor Cyan
+if (($startupRemoved.Count -eq 0) -and ($startupAdded.Count -eq 0)) {
+    Write-Host '  (nessuna differenza concettuale)'
+}
+else {
+    $startupRemoved | ForEach-Object { Write-Host ("  rimosso: {0}" -f $_) }
+    $startupAdded   | ForEach-Object { Write-Host ("  aggiunto: {0}" -f $_) }
+}
+
+# Servizi: confronta gli StartMode non-Manual della baseline compatta con l'attuale.
+$baselineServiceModes = @{}
+foreach ($p in $baseline.NonManualServiceStartModes.PSObject.Properties) {
+    $baselineServiceModes[$p.Name] = [string]$p.Value
+}
+
+$currentServiceModes = @{}
+foreach ($service in @($current.Services)) {
+    $normalizedName = Normalize-ServiceName (Get-Prop $service 'Name' '')
+    $startMode = [string](Get-Prop $service 'StartMode' '')
+    if ($startMode -ne 'Manual' -and -not [string]::IsNullOrWhiteSpace($normalizedName)) {
+        $currentServiceModes[$normalizedName] = $startMode
+    }
+}
+
+$serviceDifferences = @()
+$serviceKeys = @($baselineServiceModes.Keys + $currentServiceModes.Keys | Sort-Object -Unique)
+foreach ($key in $serviceKeys) {
+    if ($baselineServiceModes.ContainsKey($key)) { $before = $baselineServiceModes[$key] } else { $before = 'Manual/Absent' }
+    if ($currentServiceModes.ContainsKey($key))  { $after  = $currentServiceModes[$key]  } else { $after  = 'Manual/Absent' }
+
+    if ($before -ne $after) {
+        $serviceDifferences += [pscustomobject]@{
+            Servizio = $key
+            Baseline = $before
+            Attuale  = $after
+        }
+    }
+}
+
+Write-Host 'SERVIZI - START MODE DIFFERENTE' -ForegroundColor Cyan
+if ($serviceDifferences.Count -gt 0) {
+    $serviceDifferences | Format-Table -AutoSize | Out-Host
+}
+else {
+    Write-Host '  (nessuna differenza)'
+}
+
+# Programmi installati: solo informativo.
+$baselinePrograms = @($baseline.InstalledPrograms | ForEach-Object { Get-Prop $_ 'Name' '' })
+$currentPrograms  = @($current.InstalledPrograms  | ForEach-Object { Get-Prop $_ 'DisplayName' '' })
+
+$programsAdded   = @($currentPrograms  | Where-Object { $_ -and ($_ -notin $baselinePrograms) } | Sort-Object -Unique)
+$programsRemoved = @($baselinePrograms | Where-Object { $_ -and ($_ -notin $currentPrograms)  } | Sort-Object -Unique)
+
+Write-Host 'SOFTWARE DIFFERENTE DALLA BASELINE (INFORMATIVO)' -ForegroundColor Cyan
+if (($programsAdded.Count -eq 0) -and ($programsRemoved.Count -eq 0)) {
+    Write-Host '  (nessuno)'
+}
+else {
+    $programsRemoved | ForEach-Object { Write-Host ("  rimosso: {0}" -f $_) }
+    $programsAdded   | ForEach-Object { Write-Host ("  aggiunto: {0}" -f $_) }
+}
+
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+$outputPath = Join-Path $OutputDirectory ("BaselineCompare-{0}.json" -f $stamp)
+
+[ordered]@{
+    GeneratedAt                 = (Get-Date).ToString('s')
+    Baseline                    = $BaselinePath
+    Current                     = $CurrentPath
+    Snapshot                    = $rows
+    ProcessDifferences          = $processDifferences
+    ProvisionedAppxRemoved      = $removedProvisioned
+    ProvisionedAppxAdded        = $addedProvisioned
+    StartupRemoved              = $startupRemoved
+    StartupAdded                = $startupAdded
+    ServiceStartModeDifferences = $serviceDifferences
+    ProgramsRemoved             = $programsRemoved
+    ProgramsAdded               = $programsAdded
+} | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $outputPath -Encoding UTF8
+
+Write-Host ''
+Write-Host ("Report confronto: {0}" -f $outputPath) -ForegroundColor Green
+Write-Host 'Nota: RAM/processi sono snapshot runtime; AppX, startup e StartMode servizi sono differenze strutturali.' -ForegroundColor DarkGray
