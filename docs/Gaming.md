@@ -2,6 +2,12 @@
 
 Documentazione di `modules/Gaming.ps1`.
 
+## Regola di sicurezza dei preset
+
+Gaming e un'estensione del profilo Standard, non un profilo aggressivo indipendente. Le modifiche specifiche Gaming devono essere registrate dal sistema Backup/Undo prima della scrittura. Il Toolkit non deve forzare valori Gaming opposti quando si passa a Standard o Business: l'uscita da Gaming dovra ripristinare lo stato precedente registrato dal Toolkit, evitando di sovrascrivere una preferenza che esisteva gia sul PC cliente.
+
+Fino al completamento del gestore automatico delle transizioni, il passaggio Gaming -> Standard/Business non va considerato ancora certificato.
+
 ## GAMING-001 — Game Mode
 
 **Che cos'è:** Game Mode è la modalità di Windows dedicata alla gestione dei carichi di gioco.
@@ -16,7 +22,7 @@ Documentazione di `modules/Gaming.ps1`.
 
 **Dettaglio tecnico:** valori `AutoGameModeEnabled=1` e `AllowAutoGameMode=1` sotto `HKCU\Software\Microsoft\GameBar`.
 
-**Nota Undo:** il modulo Gaming attuale scrive direttamente nel registro. Prima di considerare il ripristino completo, queste scritture dovranno essere integrate nel sistema di backup centralizzato del Toolkit.
+**Undo:** le scritture passano da `Set-TDTRegistryDword`, quindi il valore/esistenza precedente viene registrato nella sessione Undo prima della modifica.
 
 ## GAMING-002 — Game DVR
 
@@ -34,4 +40,4 @@ Documentazione di `modules/Gaming.ps1`.
 
 **Dettaglio tecnico:** `HKCU\System\GameConfigStore`, `GameDVR_Enabled=0`.
 
-**Nota Undo:** come sopra, questa scrittura deve ancora essere collegata al backup centralizzato.
+**Undo:** anche questa scrittura passa dal backup centralizzato e puo essere riportata al valore/esistenza precedente tramite la sessione Undo.
