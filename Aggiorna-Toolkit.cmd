@@ -16,7 +16,6 @@ if /I not "%~1"=="--worker" (
     if not "!RC!"=="0" (
         echo.
         echo L'aggiornamento e terminato con errore !RC!.
-        echo La finestra resta aperta per permettere di leggere il messaggio.
         pause
     )
     exit /b !RC!
@@ -24,12 +23,15 @@ if /I not "%~1"=="--worker" (
 
 set "TARGET=%~2"
 if not defined TARGET (
-    echo ERRORE: cartella Toolkit non ricevuta dal processo di aggiornamento.
+    echo ERRORE: cartella Toolkit non ricevuta.
     pause
     exit /b 1
 )
+:: Rimuove il backslash finale: una destinazione quotata che termina con \ puo
+:: confondere il parsing di robocopy e inglobare le opzioni nel path.
+if "%TARGET:~-1%"=="\" set "TARGET=%TARGET:~0,-1%"
 cd /d "%TARGET%" || (
-    echo ERRORE: impossibile accedere alla cartella Toolkit: "%TARGET%"
+    echo ERRORE: impossibile accedere a "%TARGET%"
     pause
     exit /b 1
 )
@@ -39,7 +41,7 @@ set "TMPROOT=%TEMP%\TDT-Toolkit-Update-%RANDOM%-%RANDOM%"
 set "ZIPFILE=%TMPROOT%\Toolkit.zip"
 set "EXTRACT=%TMPROOT%\extract"
 set "SOURCE=%EXTRACT%\TecnicoDigitale-Windows-Toolkit-main"
-set "LOGFILE=%TARGET%Aggiornamento-Toolkit.log"
+set "LOGFILE=%TARGET%\Aggiornamento-Toolkit.log"
 
 >"%LOGFILE%" echo === Tecnico Digitale Toolkit Updater - %date% %time% ===
 cls
@@ -57,30 +59,20 @@ mkdir "%TMPROOT%" >nul 2>&1 || goto ERRORE
 mkdir "%EXTRACT%" >nul 2>&1 || goto ERRORE
 
 echo [1/4] Download ultima versione...
-echo [1/4] Download ultima versione...>>"%LOGFILE%"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri $env:REPO_ZIP -OutFile $env:ZIPFILE" >>"%LOGFILE%" 2>&1
-if errorlevel 1 (
-    echo ERRORE durante il download da GitHub.
-    goto ERRORE
-)
+if errorlevel 1 (echo ERRORE durante il download.& goto ERRORE)
 
 echo [2/4] Estrazione...
-echo [2/4] Estrazione...>>"%LOGFILE%"
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; Expand-Archive -LiteralPath $env:ZIPFILE -DestinationPath $env:EXTRACT -Force" >>"%LOGFILE%" 2>&1
-if errorlevel 1 (
-    echo ERRORE durante l'estrazione dell'archivio.
-    goto ERRORE
-)
+if errorlevel 1 (echo ERRORE durante l'estrazione.& goto ERRORE)
 
 if not exist "%SOURCE%\VERSION.json" (
     echo ERRORE: archivio estratto non valido.
-    echo ERRORE: VERSION.json non trovato in "%SOURCE%">>"%LOGFILE%"
     goto ERRORE
 )
 
 echo [3/4] Aggiornamento file...
 echo Dettagli copia: "%LOGFILE%"
-echo [3/4] Aggiornamento file...>>"%LOGFILE%"
 robocopy "%SOURCE%" "%TARGET%" /E /R:2 /W:1 /XD "%SOURCE%\lab\reports" "%SOURCE%\backups" "%SOURCE%\logs" /XF "Aggiornamento-Toolkit.log" /NP /TEE /LOG+:"%LOGFILE%"
 set "RC=!ERRORLEVEL!"
 if !RC! GEQ 8 (
@@ -93,7 +85,7 @@ rmdir /s /q "%TMPROOT%" >nul 2>&1
 
 echo.
 echo ==============================================================
-echo Aggiornamento completato.
+echo Aggiornamento completato correttamente.
 echo ==============================================================
 pause
 exit /b 0
@@ -103,10 +95,9 @@ echo.
 echo ==============================================================
 echo AGGIORNAMENTO NON RIUSCITO
 echo ==============================================================
-echo Log disponibile in: "%LOGFILE%"
+echo Log: "%LOGFILE%"
 echo.
 if exist "%LOGFILE%" type "%LOGFILE%"
 echo.
-echo La finestra rimarra aperta finche non premi un tasto.
 pause
 exit /b 1
