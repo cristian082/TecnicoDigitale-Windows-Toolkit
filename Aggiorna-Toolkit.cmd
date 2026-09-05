@@ -18,7 +18,10 @@ if not exist "%UPDATER%" (
     exit /b 2
 )
 
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%UPDATER%" -TargetPath "%~dp0"
+REM Non passiamo %%~dp0 come argomento: termina con backslash e, se quotato,
+REM puo essere interpretato da PowerShell con una virgoletta finale nel path.
+REM Update-Toolkit.ps1 usa gia $PSScriptRoot come cartella di destinazione.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%UPDATER%"
 set "RC=%ERRORLEVEL%"
 
 echo.
