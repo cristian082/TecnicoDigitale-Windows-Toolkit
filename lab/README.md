@@ -91,6 +91,56 @@ Il comparatore segnala esplicitamente quando le build Windows sono diverse. Una 
 
 Per questo **nessuna differenza rilevata dal comparatore diventa automaticamente un tweak del Toolkit**.
 
+## LTSC Deep Audit
+
+`LTSC-Deep-Audit.ps1` e un secondo strumento **read-only** pensato per cercare le differenze reali fra Windows 11 Pro e Windows 11 Enterprise LTSC al di fuori del solo elenco servizi.
+
+Raccoglie in un unico JSON:
+
+- snapshot di RAM fisica usata/libera;
+- processi attivi con Working Set e Private Memory;
+- task pianificati, stato e azioni principali;
+- pacchetti AppX installati per tutti gli utenti;
+- pacchetti AppX provisioned nell'immagine;
+- Windows Optional Features;
+- Windows Capabilities;
+- programmi Win32 rilevati dalle chiavi Uninstall, senza usare Win32_Product;
+- elementi di avvio automatico;
+- configurazione base dei servizi;
+- processi Edge e WebView2;
+- alcune policy Microsoft rilevanti per Data Collection, Cloud Content, Search, Windows Update, App Privacy, Explorer e Copilot.
+
+Non disinstalla app, non abilita/disabilita feature, non cambia servizi, task, policy o registro.
+
+Esempio Pro:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\lab\LTSC-Deep-Audit.ps1" -Label "PRO-25H2"
+```
+
+Esempio LTSC:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\lab\LTSC-Deep-Audit.ps1" -Label "LTSC-2024"
+```
+
+Il file prodotto e `lab\reports\DeepAudit-<LABEL>-<timestamp>.json`.
+
+Per evitare comandi manuali, `Avvia-Lab.cmd` espone direttamente sia gli audit servizi sia i due Deep Audit. Il BAT richiede elevazione per ottenere dati piu completi e confrontabili.
+
+### Come eseguire il confronto Deep Audit
+
+Per un confronto attendibile:
+
+1. ripristinare le due VM al rispettivo snapshot baseline;
+2. lasciare terminare login e attivita iniziali di Windows;
+3. evitare di aprire programmi non necessari;
+4. eseguire il Deep Audit una volta sulla Pro e una volta sulla LTSC;
+5. confrontare prima le differenze strutturali (AppX, task, feature, capability, startup, policy) e solo dopo le misure istantanee di RAM/processi;
+6. non interpretare una differenza di memoria o processo singolo come prova di un'ottimizzazione senza ripetere la misura.
+
+Il Deep Audit serve a trovare **candidati da studiare**, non a trasformare automaticamente ogni differenza LTSC in un tweak.
+
 ## Metodo per approvare una modifica ai servizi
 
 Prima di cambiare un servizio occorre:
