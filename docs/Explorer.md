@@ -49,3 +49,34 @@ Documentazione delle modifiche applicate da `modules/Explorer.ps1`.
 **Rischio:** basso; l'utente vede più elementi normalmente nascosti.
 
 **Dettaglio tecnico:** `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced`, `Hidden=1`.
+
+## EXPLORER-004 — Icone desktop in base all'edizione
+
+**Che cos'è:** Windows 11 lascia normalmente nascosta una parte delle icone di sistema del desktop.
+
+**Cosa fa il Toolkit:** quando `DesktopIconsByEdition=true`, rende disponibili le icone di sistema utili senza creare collegamenti `.lnk` artificiali.
+
+Su edizioni Home/Consumer mostra:
+
+- Questo PC;
+- File utente;
+- Cestino.
+
+Su edizioni Pro/Business (Professional, Workstation, Enterprise, Education e derivate) aggiunge anche:
+
+- Rete;
+- Pannello di controllo.
+
+**Perché:** su un PC tecnico o professionale Rete e Pannello di controllo sono scorciatoie utili; su un PC Home manteniamo il desktop più semplice.
+
+**Cosa non fa:** non rimuove icone già presenti e non cancella collegamenti dell'utente.
+
+**Prestazioni:** nessun beneficio; è una scelta di usabilità.
+
+**Rischio:** basso.
+
+**Ripristino:** sì, i valori Registry vengono salvati nella sessione Undo.
+
+**Dettaglio tecnico:** usa `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel` e `ClassicStartMenu`, impostando a `0` i CLSID delle icone da mostrare. L'edizione viene rilevata tramite `HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\EditionID`.
+
+**Nota:** la comparsa visiva può richiedere un refresh del desktop, disconnessione o riavvio di Explorer/Windows.
