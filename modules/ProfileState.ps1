@@ -28,9 +28,7 @@ function Save-TDTProfileState {
 function Get-TDTProfileState {
     param([Parameter(Mandatory)][string]$Root)
     $path = Get-TDTProfileStatePath -Root $Root
-    if (-not (Test-Path $path)) {
-        return [pscustomobject]@{ SchemaVersion=1; Gaming=$null }
-    }
+    if (-not (Test-Path $path)) { return [pscustomobject]@{ SchemaVersion=1; Gaming=$null } }
     return (Get-Content -LiteralPath $path -Raw | ConvertFrom-Json)
 }
 
@@ -58,6 +56,10 @@ function Restore-TDTGamingOwnership {
     $state = Get-TDTProfileState -Root $Root
     if ($null -eq $state.Gaming) { return }
     Write-Host '[Preset] Uscita da Gaming: ripristino delle sole impostazioni possedute dal Toolkit' -ForegroundColor DarkGray
+    if ($WhatIfPreference) {
+        foreach ($entry in @($state.Gaming)) { [void]$PSCmdlet.ShouldProcess("$($entry.Path)\$($entry.Name)",'Ripristinare stato precedente a Gaming') }
+        return
+    }
     $remaining = @()
     foreach ($entry in @($state.Gaming)) {
         try {
@@ -74,9 +76,7 @@ function Restore-TDTGamingOwnership {
                     if (-not (Test-Path $entry.Path)) { New-Item -Path $entry.Path -Force | Out-Null }
                     New-ItemProperty -Path $entry.Path -Name $entry.Name -PropertyType $propertyType -Value $entry.Value -Force | Out-Null
                 }
-                elseif (Test-Path $entry.Path) {
-                    Remove-ItemProperty -Path $entry.Path -Name $entry.Name -ErrorAction SilentlyContinue
-                }
+                elseif (Test-Path $entry.Path) { Remove-ItemProperty -Path $entry.Path -Name $entry.Name -ErrorAction SilentlyContinue }
             }
         }
         catch {
