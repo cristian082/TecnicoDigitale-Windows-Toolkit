@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$TargetPath = $PSScriptRoot
+    [string]$TargetPath
 )
 
 Set-StrictMode -Version 2.0
@@ -12,14 +12,24 @@ function Write-Step {
     Write-Host $Text -ForegroundColor Cyan
 }
 
-# Normalizza il target senza affidarsi a GetFullPath su argomenti CMD quotati.
-# Il launcher non passa piu il path, quindi normalmente questo coincide con $PSScriptRoot.
-$cleanTarget = ([string]$TargetPath).Trim().Trim('"')
-if ([string]::IsNullOrWhiteSpace($cleanTarget)) { $cleanTarget = $PSScriptRoot }
-if (-not (Test-Path -LiteralPath $cleanTarget -PathType Container)) {
-    throw "Cartella Toolkit non trovata: $cleanTarget"
+# IMPORTANTE: non usare $PSScriptRoot come valore predefinito nel blocco param.
+# In Windows PowerShell 5.1 puo non essere ancora valorizzato durante il binding
+# dei parametri. Risolviamo il target solo dopo l'avvio dello script.
+if ([string]::IsNullOrWhiteSpace($TargetPath)) {
+    $target = $PSScriptRoot
 }
-$target = (Resolve-Path -LiteralPath $cleanTarget).Path.TrimEnd('\')
+else {
+    $cleanTarget = ([string]$TargetPath).Trim().Trim('"')
+    if (-not (Test-Path -LiteralPath $cleanTarget -PathType Container)) {
+        throw "Cartella Toolkit non trovata: $cleanTarget"
+    }
+    $target = (Resolve-Path -LiteralPath $cleanTarget).Path
+}
+
+if ([string]::IsNullOrWhiteSpace($target) -or -not (Test-Path -LiteralPath $target -PathType Container)) {
+    throw "Impossibile determinare la cartella del Toolkit. PSScriptRoot='$PSScriptRoot'"
+}
+
 $repoZip = 'https://github.com/cristian082/TecnicoDigitale-Windows-Toolkit/archive/refs/heads/main.zip'
 $tmpRoot = Join-Path $env:TEMP ('TDT-Toolkit-Update-' + [guid]::NewGuid().ToString('N'))
 $zipPath = Join-Path $tmpRoot 'Toolkit.zip'
@@ -27,7 +37,6 @@ $extractPath = Join-Path $tmpRoot 'extract'
 $sourcePath = Join-Path $extractPath 'TecnicoDigitale-Windows-Toolkit-main'
 $logPath = Join-Path $target 'Aggiornamento-Toolkit.log'
 
-# Cartelle locali che non devono essere toccate dall'aggiornamento.
 $protectedPrefixes = @(
     'backups',
     'logs',
@@ -35,7 +44,6 @@ $protectedPrefixes = @(
     'lab\reports'
 )
 
-# File storici rimossi dal progetto che un aggiornamento copy-only lascerebbe in giro.
 $obsoleteFiles = @(
     'lab\LTSC-Deep-Audit.ps1',
     'lab\Compare-LTSC-Deep-Audit.ps1'
@@ -43,7 +51,6 @@ $obsoleteFiles = @(
 
 function Test-ProtectedRelativePath {
     param([string]$RelativePath)
-
     foreach ($prefix in $protectedPrefixes) {
         if ($RelativePath.Equals($prefix, [StringComparison]::OrdinalIgnoreCase) -or
             $RelativePath.StartsWith($prefix + '\', [StringComparison]::OrdinalIgnoreCase)) {
@@ -60,9 +67,7 @@ try {
     Write-Host ('Cartella Toolkit: ' + $target)
     Write-Host ''
 
-    try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    } catch { }
+    try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch { }
 
     New-Item -ItemType Directory -Path $tmpRoot -Force | Out-Null
     ('=== Aggiornamento Toolkit {0} ===' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')) | Set-Content -LiteralPath $logPath -Encoding UTF8
@@ -105,7 +110,6 @@ try {
         if (-not (Test-Path -LiteralPath $destinationDir)) {
             New-Item -ItemType Directory -Path $destinationDir -Force | Out-Null
         }
-
         Copy-Item -LiteralPath $file.FullName -Destination $destination -Force
         ('COPIATO: ' + $relative) | Add-Content -LiteralPath $logPath -Encoding UTF8
         $copied++
@@ -147,10 +151,7 @@ try {
     exit 0
 }
 catch {
-    try {
-        ('ERRORE: ' + $_.Exception.ToString()) | Add-Content -LiteralPath $logPath -Encoding UTF8
-    } catch { }
-
+    try { ('ERRORE: ' + $_.Exception.ToString()) | Add-Content -LiteralPath $logPath -Encoding UTF8 } catch { }
     Write-Host ''
     Write-Host ('ERRORE AGGIORNAMENTO: ' + $_.Exception.Message) -ForegroundColor Red
     Write-Host ('Log: ' + $logPath) -ForegroundColor Yellow
