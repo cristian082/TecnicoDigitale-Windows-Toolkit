@@ -13,6 +13,19 @@ function Get-SafeValue {
     try { & $Script } catch { $Default }
 }
 
+function Get-ObjectProperty {
+    param(
+        [Parameter(Mandatory = $true)]$InputObject,
+        [Parameter(Mandatory = $true)][string]$Name,
+        $Default = $null
+    )
+
+    if ($null -eq $InputObject) { return $Default }
+    $property = $InputObject.PSObject.Properties[$Name]
+    if ($null -eq $property) { return $Default }
+    return $property.Value
+}
+
 function Get-RegistryValuesFlat {
     param([string[]]$Paths)
 
@@ -87,11 +100,11 @@ if (Get-Command Get-ScheduledTask -ErrorAction SilentlyContinue) {
             }
         }
         $scheduledTasks += [pscustomobject]@{
-            TaskPath = $t.TaskPath
-            TaskName = $t.TaskName
-            State    = [string]$t.State
-            Enabled  = [bool]$t.Settings.Enabled
-            Hidden   = [bool]$t.Settings.Hidden
+            TaskPath = Get-SafeValue { [string]$t.TaskPath } ''
+            TaskName = Get-SafeValue { [string]$t.TaskName } ''
+            State    = Get-SafeValue { [string]$t.State } ''
+            Enabled  = Get-SafeValue { [bool]$t.Settings.Enabled } $false
+            Hidden   = Get-SafeValue { [bool]$t.Settings.Hidden } $false
             Actions  = $actions
         }
     }
@@ -101,34 +114,35 @@ $appxInstalled = @()
 if (Get-Command Get-AppxPackage -ErrorAction SilentlyContinue) {
     foreach ($a in (Get-AppxPackage -AllUsers -ErrorAction SilentlyContinue | Sort-Object Name, Version)) {
         $appxInstalled += [pscustomobject]@{
-            Name              = $a.Name
-            Version           = [string]$a.Version
-            Publisher         = $a.Publisher
-            Architecture      = [string]$a.Architecture
-            NonRemovable      = Get-SafeValue { [bool]$a.NonRemovable } $null
-            IsFramework       = Get-SafeValue { [bool]$a.IsFramework } $null
-            PackageFullName   = $a.PackageFullName
+            Name            = Get-SafeValue { [string]$a.Name } ''
+            Version         = Get-SafeValue { [string]$a.Version } ''
+            Publisher       = Get-SafeValue { [string]$a.Publisher } ''
+            Architecture    = Get-SafeValue { [string]$a.Architecture } ''
+            NonRemovable    = Get-SafeValue { [bool]$a.NonRemovable } $null
+            IsFramework     = Get-SafeValue { [bool]$a.IsFramework } $null
+            PackageFullName = Get-SafeValue { [string]$a.PackageFullName } ''
         }
     }
 }
 
 $appxProvisioned = @()
 if (Get-Command Get-AppxProvisionedPackage -ErrorAction SilentlyContinue) {
-    foreach ($a in (Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue | Sort-Object DisplayName, Version)) {
+    foreach ($a in (Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue)) {
         $appxProvisioned += [pscustomobject]@{
-            DisplayName = $a.DisplayName
-            Version     = [string]$a.Version
-            PackageName = $a.PackageName
+            DisplayName = Get-SafeValue { [string]$a.DisplayName } ''
+            Version     = Get-SafeValue { [string]$a.Version } ''
+            PackageName = Get-SafeValue { [string]$a.PackageName } ''
         }
     }
+    $appxProvisioned = @($appxProvisioned | Sort-Object DisplayName, Version)
 }
 
 $optionalFeatures = @()
 if (Get-Command Get-WindowsOptionalFeature -ErrorAction SilentlyContinue) {
     foreach ($f in (Get-WindowsOptionalFeature -Online -ErrorAction SilentlyContinue | Sort-Object FeatureName)) {
         $optionalFeatures += [pscustomobject]@{
-            FeatureName = $f.FeatureName
-            State       = [string]$f.State
+            FeatureName = Get-SafeValue { [string]$f.FeatureName } ''
+            State       = Get-SafeValue { [string]$f.State } ''
         }
     }
 }
@@ -137,8 +151,8 @@ $capabilities = @()
 if (Get-Command Get-WindowsCapability -ErrorAction SilentlyContinue) {
     foreach ($c in (Get-WindowsCapability -Online -ErrorAction SilentlyContinue | Sort-Object Name)) {
         $capabilities += [pscustomobject]@{
-            Name  = $c.Name
-            State = [string]$c.State
+            Name  = Get-SafeValue { [string]$c.Name } ''
+            State = Get-SafeValue { [string]$c.State } ''
         }
     }
 }
@@ -150,26 +164,28 @@ $uninstallRoots = @(
 )
 $installedPrograms = @()
 foreach ($u in $uninstallRoots) {
-    foreach ($item in (Get-ItemProperty $u -ErrorAction SilentlyContinue)) {
-        if ([string]::IsNullOrWhiteSpace([string]$item.DisplayName)) { continue }
+    foreach ($item in @(Get-ItemProperty $u -ErrorAction SilentlyContinue)) {
+        $displayName = [string](Get-ObjectProperty -InputObject $item -Name 'DisplayName' -Default '')
+        if ([string]::IsNullOrWhiteSpace($displayName)) { continue }
+
         $installedPrograms += [pscustomobject]@{
-            DisplayName     = [string]$item.DisplayName
-            DisplayVersion  = [string]$item.DisplayVersion
-            Publisher       = [string]$item.Publisher
-            InstallLocation = [string]$item.InstallLocation
-            UninstallString = [string]$item.UninstallString
+            DisplayName     = $displayName
+            DisplayVersion  = [string](Get-ObjectProperty -InputObject $item -Name 'DisplayVersion' -Default '')
+            Publisher       = [string](Get-ObjectProperty -InputObject $item -Name 'Publisher' -Default '')
+            InstallLocation = [string](Get-ObjectProperty -InputObject $item -Name 'InstallLocation' -Default '')
+            UninstallString = [string](Get-ObjectProperty -InputObject $item -Name 'UninstallString' -Default '')
         }
     }
 }
 $installedPrograms = @($installedPrograms | Sort-Object DisplayName, DisplayVersion -Unique)
 
 $startup = @()
-foreach ($s in (Get-CimInstance Win32_StartupCommand -ErrorAction SilentlyContinue | Sort-Object Name, Location)) {
+foreach ($s in @(Get-CimInstance Win32_StartupCommand -ErrorAction SilentlyContinue | Sort-Object Name, Location)) {
     $startup += [pscustomobject]@{
-        Name     = $s.Name
-        Command  = $s.Command
-        Location = $s.Location
-        User     = $s.User
+        Name     = Get-SafeValue { [string]$s.Name } ''
+        Command  = Get-SafeValue { [string]$s.Command } ''
+        Location = Get-SafeValue { [string]$s.Location } ''
+        User     = Get-SafeValue { [string]$s.User } ''
     }
 }
 
@@ -205,7 +221,7 @@ $runningProcesses = @($processes)
 $edgeProcesses = @($processes | Where-Object { $_.Name -match '^(msedge|msedgewebview2)$' })
 
 $report = [ordered]@{
-    SchemaVersion = 1
+    SchemaVersion = 2
     AuditType      = 'LTSC-Deep-Audit'
     GeneratedAt    = (Get-Date).ToString('s')
     Label          = $Label
@@ -216,39 +232,39 @@ $report = [ordered]@{
         Processor    = @($cpu | ForEach-Object { $_.Name })
     }
     Windows        = [ordered]@{
-        Caption     = $os.Caption
-        Version     = $os.Version
-        BuildNumber = $os.BuildNumber
-        Architecture = $os.OSArchitecture
+        Caption        = $os.Caption
+        Version        = $os.Version
+        BuildNumber    = $os.BuildNumber
+        Architecture   = $os.OSArchitecture
         LastBootUpTime = Get-SafeValue { ([datetime]$os.LastBootUpTime).ToString('s') } $null
     }
     Snapshot       = [ordered]@{
-        ProcessCount           = $runningProcesses.Count
-        TotalWorkingSetMB      = [math]::Round((($runningProcesses | Measure-Object WorkingSetMB -Sum).Sum), 2)
-        TotalPrivateMemoryMB   = [math]::Round((($runningProcesses | Measure-Object PrivateMemoryMB -Sum).Sum), 2)
-        PhysicalMemoryTotalMB  = $memoryTotalMB
-        PhysicalMemoryUsedMB   = $memoryUsedMB
-        PhysicalMemoryFreeMB   = $memoryFreeMB
-        EnabledScheduledTasks  = $enabledTasks.Count
-        InstalledAppxCount     = $appxInstalled.Count
-        ProvisionedAppxCount   = $appxProvisioned.Count
-        EnabledFeatureCount    = @($optionalFeatures | Where-Object State -eq 'Enabled').Count
+        ProcessCount             = $runningProcesses.Count
+        TotalWorkingSetMB        = [math]::Round((($runningProcesses | Measure-Object WorkingSetMB -Sum).Sum), 2)
+        TotalPrivateMemoryMB     = [math]::Round((($runningProcesses | Measure-Object PrivateMemoryMB -Sum).Sum), 2)
+        PhysicalMemoryTotalMB    = $memoryTotalMB
+        PhysicalMemoryUsedMB     = $memoryUsedMB
+        PhysicalMemoryFreeMB     = $memoryFreeMB
+        EnabledScheduledTasks    = $enabledTasks.Count
+        InstalledAppxCount       = $appxInstalled.Count
+        ProvisionedAppxCount     = $appxProvisioned.Count
+        EnabledFeatureCount      = @($optionalFeatures | Where-Object State -eq 'Enabled').Count
         InstalledCapabilityCount = @($capabilities | Where-Object State -eq 'Installed').Count
-        StartupItemCount       = $startup.Count
-        RunningServiceCount    = @($services | Where-Object State -eq 'Running').Count
-        EdgeWebViewProcessCount = $edgeProcesses.Count
-        EdgeWebViewWorkingSetMB = [math]::Round((($edgeProcesses | Measure-Object WorkingSetMB -Sum).Sum), 2)
+        StartupItemCount         = $startup.Count
+        RunningServiceCount      = @($services | Where-Object State -eq 'Running').Count
+        EdgeWebViewProcessCount  = $edgeProcesses.Count
+        EdgeWebViewWorkingSetMB  = [math]::Round((($edgeProcesses | Measure-Object WorkingSetMB -Sum).Sum), 2)
     }
-    Processes       = $processes
-    ScheduledTasks  = $scheduledTasks
-    AppxInstalled   = $appxInstalled
-    AppxProvisioned = $appxProvisioned
-    OptionalFeatures = $optionalFeatures
-    Capabilities    = $capabilities
+    Processes         = $processes
+    ScheduledTasks    = $scheduledTasks
+    AppxInstalled     = $appxInstalled
+    AppxProvisioned   = $appxProvisioned
+    OptionalFeatures  = $optionalFeatures
+    Capabilities      = $capabilities
     InstalledPrograms = $installedPrograms
-    StartupItems    = $startup
-    Services        = $services
-    Policies        = $policies
+    StartupItems      = $startup
+    Services          = $services
+    Policies          = $policies
 }
 
 $report | ConvertTo-Json -Depth 8 | Set-Content -Path $outPath -Encoding UTF8
