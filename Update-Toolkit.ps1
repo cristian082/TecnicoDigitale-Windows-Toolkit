@@ -7,25 +7,15 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
-function Write-Step {
-    param([string]$Text)
-    Write-Host $Text -ForegroundColor Cyan
-}
+function Write-Step { param([string]$Text) Write-Host $Text -ForegroundColor Cyan }
 
-if ([string]::IsNullOrWhiteSpace($TargetPath)) {
-    $target = $PSScriptRoot
-}
+if ([string]::IsNullOrWhiteSpace($TargetPath)) { $target = $PSScriptRoot }
 else {
     $cleanTarget = ([string]$TargetPath).Trim().Trim('"')
-    if (-not (Test-Path -LiteralPath $cleanTarget -PathType Container)) {
-        throw "Cartella Toolkit non trovata: $cleanTarget"
-    }
+    if (-not (Test-Path -LiteralPath $cleanTarget -PathType Container)) { throw "Cartella Toolkit non trovata: $cleanTarget" }
     $target = (Resolve-Path -LiteralPath $cleanTarget).Path
 }
-
-if ([string]::IsNullOrWhiteSpace($target) -or -not (Test-Path -LiteralPath $target -PathType Container)) {
-    throw "Impossibile determinare la cartella del Toolkit. PSScriptRoot='$PSScriptRoot'"
-}
+if ([string]::IsNullOrWhiteSpace($target) -or -not (Test-Path -LiteralPath $target -PathType Container)) { throw "Impossibile determinare la cartella del Toolkit." }
 
 $repoZip = 'https://github.com/cristian082/TecnicoDigitale-Windows-Toolkit/archive/refs/heads/main.zip'
 $tmpRoot = Join-Path $env:TEMP ('TDT-Toolkit-Update-' + [guid]::NewGuid().ToString('N'))
@@ -33,62 +23,23 @@ $zipPath = Join-Path $tmpRoot 'Toolkit.zip'
 $extractPath = Join-Path $tmpRoot 'extract'
 $sourcePath = Join-Path $extractPath 'TecnicoDigitale-Windows-Toolkit-main'
 $logPath = Join-Path $target 'Aggiornamento-Toolkit.log'
-
-$protectedPrefixes = @(
-    'backups',
-    'logs',
-    'reports',
-    'lab\reports'
-)
-
-$obsoleteFiles = @(
-    'lab\LTSC-Deep-Audit.ps1',
-    'lab\Compare-LTSC-Deep-Audit.ps1'
-)
+$protectedPrefixes = @('backups','logs','reports','lab\reports')
+$obsoleteFiles = @('lab\LTSC-Deep-Audit.ps1','lab\Compare-LTSC-Deep-Audit.ps1')
 
 function Test-ProtectedRelativePath {
     param([string]$RelativePath)
     foreach ($prefix in $protectedPrefixes) {
-        if ($RelativePath.Equals($prefix, [StringComparison]::OrdinalIgnoreCase) -or
-            $RelativePath.StartsWith($prefix + '\', [StringComparison]::OrdinalIgnoreCase)) {
-            return $true
-        }
+        if ($RelativePath.Equals($prefix,[StringComparison]::OrdinalIgnoreCase) -or $RelativePath.StartsWith($prefix+'\',[StringComparison]::OrdinalIgnoreCase)) { return $true }
     }
     return $false
 }
 
-function Get-RelativeToolkitPath {
-    param(
-        [Parameter(Mandatory=$true)][string]$Root,
-        [Parameter(Mandatory=$true)][string]$FullName
-    )
-
-    $rootWithSlash = $Root.TrimEnd('\') + '\'
-    if (-not $FullName.StartsWith($rootWithSlash, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Percorso sorgente inatteso: '$FullName' non e sotto '$Root'."
-    }
-
-    $relative = $FullName.Substring($rootWithSlash.Length)
-    if ([string]::IsNullOrWhiteSpace($relative) -or [IO.Path]::IsPathRooted($relative)) {
-        throw "Percorso relativo non valido calcolato da '$FullName'."
-    }
-
-    return $relative
-}
-
 function Remove-StrayUpdaterDirectory {
     param([string]$Root)
-
     $stray = Join-Path $Root 'n'
     if (-not (Test-Path -LiteralPath $stray -PathType Container)) { return }
-
-    # Rimuoviamo solo la cartella prodotta dal vecchio bug se ha la firma completa
-    # di una copia del Toolkit. Una normale cartella 'n' dell'utente non viene toccata.
     $signature = @('VERSION.json','Avvia-Toolkit.cmd','Setup.ps1','modules','presets')
-    foreach ($item in $signature) {
-        if (-not (Test-Path -LiteralPath (Join-Path $stray $item))) { return }
-    }
-
+    foreach ($item in $signature) { if (-not (Test-Path -LiteralPath (Join-Path $stray $item))) { return } }
     Write-Host "  Rimozione cartella spuria del vecchio updater: $stray" -ForegroundColor Yellow
     Remove-Item -LiteralPath $stray -Recurse -Force
     ('RIMOSSA CARTELLA SPURIA: n') | Add-Content -LiteralPath $logPath -Encoding UTF8
@@ -100,102 +51,73 @@ try {
     Write-Host '=============================================================='
     Write-Host ('Cartella Toolkit: ' + $target)
     Write-Host ''
-
     try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch { }
-
     New-Item -ItemType Directory -Path $tmpRoot -Force | Out-Null
     ('=== Aggiornamento Toolkit {0} ===' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')) | Set-Content -LiteralPath $logPath -Encoding UTF8
-    ('Target: ' + $target) | Add-Content -LiteralPath $logPath -Encoding UTF8
+    ('Target: '+$target) | Add-Content -LiteralPath $logPath -Encoding UTF8
 
     Write-Step '[1/5] Download ultima versione da GitHub...'
     Invoke-WebRequest -Uri $repoZip -OutFile $zipPath -UseBasicParsing
-    if (-not (Test-Path -LiteralPath $zipPath) -or (Get-Item -LiteralPath $zipPath).Length -lt 1024) {
-        throw 'Download non valido o incompleto.'
-    }
+    if (-not (Test-Path -LiteralPath $zipPath) -or (Get-Item -LiteralPath $zipPath).Length -lt 1024) { throw 'Download non valido o incompleto.' }
 
     Write-Step '[2/5] Estrazione archivio...'
     New-Item -ItemType Directory -Path $extractPath -Force | Out-Null
     Expand-Archive -LiteralPath $zipPath -DestinationPath $extractPath -Force
+    if (-not (Test-Path -LiteralPath (Join-Path $sourcePath 'VERSION.json'))) { throw 'Archivio GitHub non valido: VERSION.json non trovato.' }
+    if (-not (Test-Path -LiteralPath (Join-Path $sourcePath 'Avvia-Toolkit.cmd'))) { throw 'Archivio GitHub non valido: Avvia-Toolkit.cmd non trovato.' }
 
-    if (-not (Test-Path -LiteralPath (Join-Path $sourcePath 'VERSION.json'))) {
-        throw 'Archivio GitHub non valido: VERSION.json non trovato.'
-    }
-    if (-not (Test-Path -LiteralPath (Join-Path $sourcePath 'Avvia-Toolkit.cmd'))) {
-        throw 'Archivio GitHub non valido: Avvia-Toolkit.cmd non trovato.'
-    }
-
-    $remoteVersion = '?'
-    $localVersion = '?'
-    try { $remoteVersion = (Get-Content (Join-Path $sourcePath 'VERSION.json') -Raw | ConvertFrom-Json).version } catch { }
-    try { $localVersion = (Get-Content (Join-Path $target 'VERSION.json') -Raw | ConvertFrom-Json).version } catch { }
+    $remoteVersion='?'; $localVersion='?'
+    try { $remoteVersion=(Get-Content (Join-Path $sourcePath 'VERSION.json') -Raw|ConvertFrom-Json).version } catch {}
+    try { $localVersion=(Get-Content (Join-Path $target 'VERSION.json') -Raw|ConvertFrom-Json).version } catch {}
     Write-Host ("Versione locale : {0}" -f $localVersion)
     Write-Host ("Versione remota : {0}" -f $remoteVersion)
     Write-Host ''
 
     Write-Step '[3/5] Aggiornamento file...'
-    $copied = 0
-    foreach ($file in Get-ChildItem -LiteralPath $sourcePath -Recurse -File) {
-        $relative = Get-RelativeToolkitPath -Root $sourcePath -FullName $file.FullName
-        if (Test-ProtectedRelativePath $relative) { continue }
-        if ($relative.Equals('Aggiornamento-Toolkit.log', [StringComparison]::OrdinalIgnoreCase)) { continue }
-
-        $destination = Join-Path $target $relative
-        $destinationDir = Split-Path -Parent $destination
-        if (-not (Test-Path -LiteralPath $destinationDir)) {
-            New-Item -ItemType Directory -Path $destinationDir -Force | Out-Null
+    $copied=0
+    # Non confrontiamo stringhe di path assoluti: Windows puo restituire lo stesso TEMP
+    # in forma lunga (Users\Win11 Pro) o 8.3 (Users\WIN11P~1). Enumeriamo invece
+    # i file relativamente alla directory sorgente, eliminando alla radice il problema.
+    Push-Location -LiteralPath $sourcePath
+    try {
+        foreach ($file in Get-ChildItem -LiteralPath . -Recurse -File) {
+            $relative = $file.FullName.Substring((Get-Location).Path.Length).TrimStart('\')
+            if ([string]::IsNullOrWhiteSpace($relative) -or [IO.Path]::IsPathRooted($relative)) { throw "Percorso relativo non valido: $relative" }
+            if (Test-ProtectedRelativePath $relative) { continue }
+            if ($relative.Equals('Aggiornamento-Toolkit.log',[StringComparison]::OrdinalIgnoreCase)) { continue }
+            $destination=Join-Path $target $relative
+            $destinationDir=Split-Path -Parent $destination
+            if (-not (Test-Path -LiteralPath $destinationDir)) { New-Item -ItemType Directory -Path $destinationDir -Force|Out-Null }
+            Copy-Item -LiteralPath $file.FullName -Destination $destination -Force
+            ('COPIATO: '+$relative)|Add-Content -LiteralPath $logPath -Encoding UTF8
+            $copied++
         }
-        Copy-Item -LiteralPath $file.FullName -Destination $destination -Force
-        ('COPIATO: ' + $relative) | Add-Content -LiteralPath $logPath -Encoding UTF8
-        $copied++
     }
+    finally { Pop-Location }
 
     Write-Step '[4/5] Pulizia componenti obsoleti...'
     foreach ($relative in $obsoleteFiles) {
-        $path = Join-Path $target $relative
-        if (Test-Path -LiteralPath $path -PathType Leaf) {
-            Remove-Item -LiteralPath $path -Force
-            ('RIMOSSO OBSOLETO: ' + $relative) | Add-Content -LiteralPath $logPath -Encoding UTF8
-            Write-Host ('  Rimosso: ' + $relative)
-        }
+        $path=Join-Path $target $relative
+        if (Test-Path -LiteralPath $path -PathType Leaf) { Remove-Item -LiteralPath $path -Force; ('RIMOSSO OBSOLETO: '+$relative)|Add-Content -LiteralPath $logPath -Encoding UTF8 }
     }
     Remove-StrayUpdaterDirectory -Root $target
 
     Write-Step '[5/5] Verifica finale...'
-    $required = @(
-        'VERSION.json',
-        'Avvia-Toolkit.cmd',
-        'Avvia-Lab.cmd',
-        'Setup.ps1',
-        'Update-Toolkit.ps1',
-        'lab\Deep-Audit.ps1',
-        'lab\Compare-Baseline.ps1',
-        'lab\baselines\Windows11-Pro-Clean-Before-Standard.json'
-    )
-    foreach ($relative in $required) {
-        if (-not (Test-Path -LiteralPath (Join-Path $target $relative) -PathType Leaf)) {
-            throw "Verifica finale fallita: manca $relative"
-        }
-    }
-
-    if (Test-Path -LiteralPath (Join-Path $target 'n') -PathType Container) {
-        Write-Warning "Esiste ancora una cartella 'n'. Non e stata rimossa perche non corrisponde alla firma del vecchio bug updater."
-    }
-
-    ('File copiati: ' + $copied) | Add-Content -LiteralPath $logPath -Encoding UTF8
-    ('RISULTATO: OK') | Add-Content -LiteralPath $logPath -Encoding UTF8
-
+    $required=@('VERSION.json','Avvia-Toolkit.cmd','Avvia-Lab.cmd','Setup.ps1','Update-Toolkit.ps1','lab\Deep-Audit.ps1','lab\Compare-Baseline.ps1','lab\baselines\Windows11-Pro-Clean-Before-Standard.json')
+    foreach ($relative in $required) { if (-not (Test-Path -LiteralPath (Join-Path $target $relative) -PathType Leaf)) { throw "Verifica finale fallita: manca $relative" } }
+    if (Test-Path -LiteralPath (Join-Path $target 'n') -PathType Container) { Write-Warning "Esiste ancora una cartella 'n'. Non rimossa per sicurezza." }
+    ('File copiati: '+$copied)|Add-Content -LiteralPath $logPath -Encoding UTF8
+    'RISULTATO: OK'|Add-Content -LiteralPath $logPath -Encoding UTF8
     Write-Host ''
     Write-Host ("Aggiornamento completato. File aggiornati: {0}" -f $copied) -ForegroundColor Green
-    Write-Host ('Log: ' + $logPath)
+    Write-Host ('Log: '+$logPath)
     exit 0
 }
 catch {
-    try { ('ERRORE: ' + $_.Exception.ToString()) | Add-Content -LiteralPath $logPath -Encoding UTF8 } catch { }
+    try { ('ERRORE: '+$_.Exception.ToString())|Add-Content -LiteralPath $logPath -Encoding UTF8 } catch {}
     Write-Host ''
-    Write-Host ('ERRORE AGGIORNAMENTO: ' + $_.Exception.Message) -ForegroundColor Red
-    Write-Host ('Log: ' + $logPath) -ForegroundColor Yellow
+    Write-Host ('ERRORE AGGIORNAMENTO: '+$_.Exception.Message) -ForegroundColor Red
+    Write-Host ('Log: '+$logPath) -ForegroundColor Yellow
     exit 1
 }
-finally {
-    Remove-Item -LiteralPath $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue
-}
+finally { Remove-Item -LiteralPath $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue }
