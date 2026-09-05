@@ -28,8 +28,10 @@ function Save-TDTProfileState {
 function Get-TDTProfileState {
     param([Parameter(Mandatory)][string]$Root)
     $path = Get-TDTProfileStatePath -Root $Root
-    if (-not (Test-Path $path)) { return [pscustomobject]@{ SchemaVersion=1; Gaming=$null } }
-    return (Get-Content -LiteralPath $path -Raw | ConvertFrom-Json)
+    if (-not (Test-Path $path)) { return [pscustomobject]@{ SchemaVersion=1; Gaming=$null; Business=$null } }
+    $state = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
+    if ($null -eq $state.PSObject.Properties['Business']) { $state | Add-Member -NotePropertyName Business -NotePropertyValue $null }
+    return $state
 }
 
 function Initialize-TDTGamingOwnership {
@@ -50,26 +52,19 @@ function Initialize-TDTGamingOwnership {
     Save-TDTProfileState -Root $Root -State $state
 }
 
-function Restore-TDTGamingOwnership {
+function Restore-TDTOwnedRegistryEntries {
     [CmdletBinding(SupportsShouldProcess=$true)]
-    param([Parameter(Mandatory)][string]$Root)
-    $state = Get-TDTProfileState -Root $Root
-    if ($null -eq $state.Gaming) { return }
-    Write-Host '[Preset] Uscita da Gaming: ripristino delle sole impostazioni possedute dal Toolkit' -ForegroundColor DarkGray
-    if ($WhatIfPreference) {
-        foreach ($entry in @($state.Gaming)) { [void]$PSCmdlet.ShouldProcess("$($entry.Path)\$($entry.Name)",'Ripristinare stato precedente a Gaming') }
-        return
-    }
+    param([Parameter(Mandatory)]$Entries,[Parameter(Mandatory)][string]$Label)
     $remaining = @()
-    foreach ($entry in @($state.Gaming)) {
+    foreach ($entry in @($Entries)) {
         try {
             $current = Get-TDTRegistryValueSnapshot -Path $entry.Path -Name $entry.Name
             if (-not $current.ValueExisted -or [int]$current.Value -ne [int]$entry.AppliedValue) {
-                Write-Warning "[Preset] $($entry.Path)\$($entry.Name) e stato modificato dopo Gaming: non lo sovrascrivo."
+                Write-Warning "[Preset] $($entry.Path)\$($entry.Name) e stato modificato dopo $Label`: non lo sovrascrivo."
                 $remaining += $entry
                 continue
             }
-            if ($PSCmdlet.ShouldProcess("$($entry.Path)\$($entry.Name)",'Ripristinare stato precedente a Gaming')) {
+            if ($PSCmdlet.ShouldProcess("$($entry.Path)\$($entry.Name)","Ripristinare stato precedente a $Label")) {
                 Add-TDTRegistryBackup -Path $entry.Path -Name $entry.Name
                 if ($entry.ValueExisted) {
                     $propertyType = switch ([string]$entry.Kind) { 'DWord' {'DWord'} 'QWord' {'QWord'} 'Binary' {'Binary'} 'MultiString' {'MultiString'} 'ExpandString' {'ExpandString'} default {'String'} }
@@ -80,10 +75,48 @@ function Restore-TDTGamingOwnership {
             }
         }
         catch {
-            Write-Warning "[Preset] Ripristino Gaming fallito per $($entry.Path)\$($entry.Name): $($_.Exception.Message)"
+            Write-Warning "[Preset] Ripristino $Label fallito per $($entry.Path)\$($entry.Name): $($_.Exception.Message)"
             $remaining += $entry
         }
     }
+    return ,$remaining
+}
+
+function Restore-TDTGamingOwnership {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param([Parameter(Mandatory)][string]$Root)
+    $state = Get-TDTProfileState -Root $Root
+    if ($null -eq $state.Gaming) { return }
+    Write-Host '[Preset] Uscita da Gaming: ripristino delle sole impostazioni possedute dal Toolkit' -ForegroundColor DarkGray
+    if ($WhatIfPreference) {
+        foreach ($entry in @($state.Gaming)) { [void]$PSCmdlet.ShouldProcess("$($entry.Path)\$($entry.Name)",'Ripristinare stato precedente a Gaming') }
+        return
+    }
+    $remaining = @(Restore-TDTOwnedRegistryEntries -Entries $state.Gaming -Label 'Gaming')
     $state.Gaming = if ($remaining.Count -gt 0) { $remaining } else { $null }
+    Save-TDTProfileState -Root $Root -State $state
+}
+
+function Initialize-TDTBusinessOwnership {
+    param([Parameter(Mandatory)][string]$Root)
+    $state = Get-TDTProfileState -Root $Root
+    if ($null -ne $state.Business) { return }
+    $snap = Get-TDTRegistryValueSnapshot -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'TaskbarAl'
+    $state.Business = @([pscustomobject]@{ Path=$snap.Path; Name=$snap.Name; ValueExisted=$snap.ValueExisted; Kind=$snap.Kind; Value=$snap.Value; AppliedValue=0 })
+    Save-TDTProfileState -Root $Root -State $state
+}
+
+function Restore-TDTBusinessOwnership {
+    [CmdletBinding(SupportsShouldProcess=$true)]
+    param([Parameter(Mandatory)][string]$Root)
+    $state = Get-TDTProfileState -Root $Root
+    if ($null -eq $state.Business) { return }
+    Write-Host '[Preset] Uscita da Business: ripristino allineamento Start precedente' -ForegroundColor DarkGray
+    if ($WhatIfPreference) {
+        foreach ($entry in @($state.Business)) { [void]$PSCmdlet.ShouldProcess("$($entry.Path)\$($entry.Name)",'Ripristinare stato precedente a Business') }
+        return
+    }
+    $remaining = @(Restore-TDTOwnedRegistryEntries -Entries $state.Business -Label 'Business')
+    $state.Business = if ($remaining.Count -gt 0) { $remaining } else { $null }
     Save-TDTProfileState -Root $Root -State $state
 }
