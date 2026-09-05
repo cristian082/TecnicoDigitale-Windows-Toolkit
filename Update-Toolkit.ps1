@@ -12,9 +12,6 @@ function Write-Step {
     Write-Host $Text -ForegroundColor Cyan
 }
 
-# IMPORTANTE: non usare $PSScriptRoot come valore predefinito nel blocco param.
-# In Windows PowerShell 5.1 puo non essere ancora valorizzato durante il binding
-# dei parametri. Risolviamo il target solo dopo l'avvio dello script.
 if ([string]::IsNullOrWhiteSpace($TargetPath)) {
     $target = $PSScriptRoot
 }
@@ -60,6 +57,43 @@ function Test-ProtectedRelativePath {
     return $false
 }
 
+function Get-RelativeToolkitPath {
+    param(
+        [Parameter(Mandatory=$true)][string]$Root,
+        [Parameter(Mandatory=$true)][string]$FullName
+    )
+
+    $rootWithSlash = $Root.TrimEnd('\') + '\'
+    if (-not $FullName.StartsWith($rootWithSlash, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Percorso sorgente inatteso: '$FullName' non e sotto '$Root'."
+    }
+
+    $relative = $FullName.Substring($rootWithSlash.Length)
+    if ([string]::IsNullOrWhiteSpace($relative) -or [IO.Path]::IsPathRooted($relative)) {
+        throw "Percorso relativo non valido calcolato da '$FullName'."
+    }
+
+    return $relative
+}
+
+function Remove-StrayUpdaterDirectory {
+    param([string]$Root)
+
+    $stray = Join-Path $Root 'n'
+    if (-not (Test-Path -LiteralPath $stray -PathType Container)) { return }
+
+    # Rimuoviamo solo la cartella prodotta dal vecchio bug se ha la firma completa
+    # di una copia del Toolkit. Una normale cartella 'n' dell'utente non viene toccata.
+    $signature = @('VERSION.json','Avvia-Toolkit.cmd','Setup.ps1','modules','presets')
+    foreach ($item in $signature) {
+        if (-not (Test-Path -LiteralPath (Join-Path $stray $item))) { return }
+    }
+
+    Write-Host "  Rimozione cartella spuria del vecchio updater: $stray" -ForegroundColor Yellow
+    Remove-Item -LiteralPath $stray -Recurse -Force
+    ('RIMOSSA CARTELLA SPURIA: n') | Add-Content -LiteralPath $logPath -Encoding UTF8
+}
+
 try {
     Write-Host '=============================================================='
     Write-Host '      TECNICO DIGITALE - AGGIORNAMENTO TOOLKIT'
@@ -101,7 +135,7 @@ try {
     Write-Step '[3/5] Aggiornamento file...'
     $copied = 0
     foreach ($file in Get-ChildItem -LiteralPath $sourcePath -Recurse -File) {
-        $relative = $file.FullName.Substring($sourcePath.Length).TrimStart('\')
+        $relative = Get-RelativeToolkitPath -Root $sourcePath -FullName $file.FullName
         if (Test-ProtectedRelativePath $relative) { continue }
         if ($relative.Equals('Aggiornamento-Toolkit.log', [StringComparison]::OrdinalIgnoreCase)) { continue }
 
@@ -115,7 +149,7 @@ try {
         $copied++
     }
 
-    Write-Step '[4/5] Rimozione componenti obsoleti...'
+    Write-Step '[4/5] Pulizia componenti obsoleti...'
     foreach ($relative in $obsoleteFiles) {
         $path = Join-Path $target $relative
         if (Test-Path -LiteralPath $path -PathType Leaf) {
@@ -124,6 +158,7 @@ try {
             Write-Host ('  Rimosso: ' + $relative)
         }
     }
+    Remove-StrayUpdaterDirectory -Root $target
 
     Write-Step '[5/5] Verifica finale...'
     $required = @(
@@ -140,6 +175,10 @@ try {
         if (-not (Test-Path -LiteralPath (Join-Path $target $relative) -PathType Leaf)) {
             throw "Verifica finale fallita: manca $relative"
         }
+    }
+
+    if (Test-Path -LiteralPath (Join-Path $target 'n') -PathType Container) {
+        Write-Warning "Esiste ancora una cartella 'n'. Non e stata rimossa perche non corrisponde alla firma del vecchio bug updater."
     }
 
     ('File copiati: ' + $copied) | Add-Content -LiteralPath $logPath -Encoding UTF8
