@@ -53,26 +53,31 @@ function Get-RegistryValuesFlat {
     @($items | Sort-Object Path, Name)
 }
 
-$root = Split-Path -Parent $PSScriptRoot
 $reportDir = Join-Path $PSScriptRoot 'reports'
 if (-not (Test-Path $reportDir)) {
     New-Item -ItemType Directory -Path $reportDir -Force | Out-Null
 }
 
-$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+$os = Get-CimInstance Win32_OperatingSystem
+$cs = Get-CimInstance Win32_ComputerSystem
+$cpu = @(Get-CimInstance Win32_Processor)
+
 $safeLabel = ($Label -replace '[^A-Za-z0-9._-]', '_')
-$outPath = Join-Path $reportDir ("DeepAudit-{0}-{1}.json" -f $safeLabel, $stamp)
+$safeComputer = ($env:COMPUTERNAME -replace '[^A-Za-z0-9._-]', '_')
+$build = [string]$os.BuildNumber
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmssfff'
+$unique = [guid]::NewGuid().ToString('N').Substring(0,8)
+$outName = "DeepAudit-{0}-Build{1}-{2}-{3}-{4}.json" -f $safeLabel, $build, $safeComputer, $stamp, $unique
+$outPath = Join-Path $reportDir $outName
 
 Write-Host '=============================================================='
 Write-Host ' TecnicoDigitale - LTSC Deep Audit (READ-ONLY)'
 Write-Host '=============================================================='
 Write-Host ("Label: {0}" -f $Label)
+Write-Host ("Windows: {0} - Build {1}" -f $os.Caption, $os.BuildNumber)
+Write-Host ("Computer: {0}" -f $env:COMPUTERNAME)
 Write-Host 'Nessuna impostazione verra modificata.'
 Write-Host ''
-
-$os = Get-CimInstance Win32_OperatingSystem
-$cs = Get-CimInstance Win32_ComputerSystem
-$cpu = @(Get-CimInstance Win32_Processor)
 
 $processes = @()
 foreach ($p in (Get-Process | Sort-Object ProcessName, Id)) {
@@ -221,11 +226,13 @@ $runningProcesses = @($processes)
 $edgeProcesses = @($processes | Where-Object { $_.Name -match '^(msedge|msedgewebview2)$' })
 
 $report = [ordered]@{
-    SchemaVersion = 2
+    SchemaVersion = 3
     AuditType      = 'LTSC-Deep-Audit'
     GeneratedAt    = (Get-Date).ToString('s')
     Label          = $Label
+    ReportFileName = $outName
     Computer       = [ordered]@{
+        ComputerName = $env:COMPUTERNAME
         Manufacturer = $cs.Manufacturer
         Model        = $cs.Model
         TotalRAMMB   = [math]::Round($cs.TotalPhysicalMemory / 1MB, 0)
