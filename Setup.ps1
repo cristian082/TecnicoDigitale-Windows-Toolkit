@@ -27,7 +27,10 @@ $presetPath = Join-Path $Root "presets\$Preset.json"
 if (-not (Test-Path $presetPath)) { throw "Preset non trovato: $presetPath" }
 $config = Get-Content $presetPath -Raw | ConvertFrom-Json
 
-$moduleOrder = @('Version','Backup','Common','Diagnostics','Restore','Privacy','Explorer','Start-Taskbar','Debloat','Gaming','Software')
+# I preset modificano/ottimizzano Windows soltanto.
+# L'installazione software e volutamente separata per rendere i test BEFORE/AFTER puliti
+# e per evitare di installare applicazioni non richieste sui PC dei clienti.
+$moduleOrder = @('Version','Backup','Common','Diagnostics','Restore','Privacy','Explorer','Start-Taskbar','Debloat','Gaming')
 foreach ($module in $moduleOrder) {
     $path = Join-Path $Root "modules\$module.ps1"
     if (-not (Test-Path $path)) { throw "Modulo mancante: $path" }
@@ -37,6 +40,7 @@ foreach ($module in $moduleOrder) {
 $script:TDTVersionInfo = Get-TDTVersionInfo -Root $Root
 Write-TDTVersionBanner -VersionInfo $script:TDTVersionInfo
 Write-Host "Preset: $Preset" -ForegroundColor Cyan
+Write-Host 'Software: nessuna installazione automatica dal preset' -ForegroundColor DarkGray
 
 try {
     if ($config.Diagnostics.Enabled) { [void](Invoke-TDTDiagnostics -Config $config.Diagnostics -VersionInfo $script:TDTVersionInfo) }
@@ -52,7 +56,6 @@ try {
     if ($config.StartTaskbar.Enabled) { Invoke-TDTStartTaskbar -Config $config.StartTaskbar -WhatIf:$WhatIfPreference }
     if ($config.Debloat.Enabled) { Invoke-TDTDebloat -Config $config.Debloat -WhatIf:$WhatIfPreference }
     if ($config.Gaming.Enabled) { Invoke-TDTGaming -Config $config.Gaming -WhatIf:$WhatIfPreference }
-    if ($config.Software.Enabled) { Invoke-TDTSoftware -Config $config.Software -WhatIf:$WhatIfPreference }
 
     if (-not $WhatIfPreference) { Complete-TDTBackupSession }
     Write-Host 'Operazione completata. Alcune modifiche richiedono disconnessione o riavvio.' -ForegroundColor Green
