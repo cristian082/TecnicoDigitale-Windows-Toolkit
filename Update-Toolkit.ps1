@@ -12,7 +12,14 @@ function Write-Step {
     Write-Host $Text -ForegroundColor Cyan
 }
 
-$target = [IO.Path]::GetFullPath($TargetPath).TrimEnd('\')
+# Normalizza il target senza affidarsi a GetFullPath su argomenti CMD quotati.
+# Il launcher non passa piu il path, quindi normalmente questo coincide con $PSScriptRoot.
+$cleanTarget = ([string]$TargetPath).Trim().Trim('"')
+if ([string]::IsNullOrWhiteSpace($cleanTarget)) { $cleanTarget = $PSScriptRoot }
+if (-not (Test-Path -LiteralPath $cleanTarget -PathType Container)) {
+    throw "Cartella Toolkit non trovata: $cleanTarget"
+}
+$target = (Resolve-Path -LiteralPath $cleanTarget).Path.TrimEnd('\')
 $repoZip = 'https://github.com/cristian082/TecnicoDigitale-Windows-Toolkit/archive/refs/heads/main.zip'
 $tmpRoot = Join-Path $env:TEMP ('TDT-Toolkit-Update-' + [guid]::NewGuid().ToString('N'))
 $zipPath = Join-Path $tmpRoot 'Toolkit.zip'
@@ -52,10 +59,6 @@ try {
     Write-Host '=============================================================='
     Write-Host ('Cartella Toolkit: ' + $target)
     Write-Host ''
-
-    if (-not (Test-Path -LiteralPath $target -PathType Container)) {
-        throw "Cartella Toolkit non trovata: $target"
-    }
 
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
