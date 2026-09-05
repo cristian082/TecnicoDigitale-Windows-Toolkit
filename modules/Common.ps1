@@ -35,6 +35,16 @@ function Get-TDTDeterministicGuid {
     }
 }
 
+function Get-TDTActiveSetupComponentPath {
+    param(
+        [Parameter(Mandatory)][string]$RelativePath,
+        [Parameter(Mandatory)][string]$Name
+    )
+
+    $componentGuid = Get-TDTDeterministicGuid -Text "$RelativePath|$Name"
+    return "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\$componentGuid"
+}
+
 function Register-TDTActiveSetupDword {
     param(
         [Parameter(Mandatory)][string]$RelativePath,
@@ -44,8 +54,7 @@ function Register-TDTActiveSetupDword {
 
     # Active Setup esegue lo StubPath nel contesto di ogni utente al prossimo accesso.
     # In questo modo non forziamo la scrittura negli hive di profili non attivi/protetti.
-    $componentGuid = Get-TDTDeterministicGuid -Text "$RelativePath|$Name"
-    $componentPath = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\$componentGuid"
+    $componentPath = Get-TDTActiveSetupComponentPath -RelativePath $RelativePath -Name $Name
     if (-not (Test-Path $componentPath)) { New-Item -Path $componentPath -Force | Out-Null }
 
     $regPath = 'HKCU\' + $RelativePath.Replace(':','').Replace('/','\')
@@ -57,6 +66,30 @@ function Register-TDTActiveSetupDword {
     New-ItemProperty -Path $componentPath -Name 'Version' -PropertyType String -Value $version -Force | Out-Null
     New-ItemProperty -Path $componentPath -Name 'IsInstalled' -PropertyType DWord -Value 1 -Force | Out-Null
     New-ItemProperty -Path $componentPath -Name 'StubPath' -PropertyType String -Value $stubPath -Force | Out-Null
+}
+
+function Remove-TDTActiveSetupDword {
+    param(
+        [Parameter(Mandatory)][string]$RelativePath,
+        [Parameter(Mandatory)][string]$Name
+    )
+
+    $componentPath = Get-TDTActiveSetupComponentPath -RelativePath $RelativePath -Name $Name
+    if (-not (Test-Path $componentPath)) { return $false }
+
+    try {
+        $label = (Get-ItemProperty -LiteralPath $componentPath -ErrorAction SilentlyContinue).'(default)'
+        if ($label -and [string]$label -notlike 'TecnicoDigitale -*') {
+            Write-Warning "Active Setup $componentPath non sembra appartenere al Toolkit: non lo rimuovo."
+            return $false
+        }
+        Remove-Item -LiteralPath $componentPath -Recurse -Force -ErrorAction Stop
+        return $true
+    }
+    catch {
+        Write-Warning "Impossibile rimuovere Active Setup per $RelativePath\$Name : $($_.Exception.Message)"
+        return $false
+    }
 }
 
 function Set-TDTUserDword {
