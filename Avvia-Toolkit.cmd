@@ -19,30 +19,34 @@ echo                 Versione %TDT_VERSION%
 echo ==================================================
 echo.
 echo   [1] STANDARD
- echo      PC domestici e uso generale
+ echo      Ottimizzazione sicura PC domestici e uso generale
 echo.
 echo   [2] GAMING
- echo      PC dedicati principalmente ai videogiochi
+ echo      Ottimizzazione conservativa per PC gaming
 echo.
 echo   [3] BUSINESS
- echo      PC professionali e postazioni di lavoro
+ echo      Ottimizzazione per postazioni professionali
 echo.
-echo   [4] STRUMENTI RAPIDI TECNICO
+echo   [4] INSTALLA SOFTWARE
+ echo      Scegli manualmente quali programmi installare
+echo.
+echo   [5] STRUMENTI RAPIDI TECNICO
  echo      Rete, DNS, Spooler e triage processi
 echo.
-echo   [5] RIPRISTINA MODIFICHE TOOLKIT
+echo   [6] RIPRISTINA MODIFICHE TOOLKIT
  echo      Annulla le modifiche registrate nell'ultima sessione
 echo.
-echo   [6] ESCI
+echo   [7] ESCI
 echo.
 set "scelta="
 set /p "scelta=Scelta: "
 if "%scelta%"=="1" set "preset=Standard"& goto AVVIA
 if "%scelta%"=="2" set "preset=Gaming"& goto AVVIA
 if "%scelta%"=="3" set "preset=Business"& goto AVVIA
-if "%scelta%"=="4" goto TOOLS
-if "%scelta%"=="5" goto UNDO
-if "%scelta%"=="6" exit /b
+if "%scelta%"=="4" goto SOFTWARE
+if "%scelta%"=="5" goto TOOLS
+if "%scelta%"=="6" goto UNDO
+if "%scelta%"=="7" exit /b
 echo.
 echo Scelta non valida. Premi un tasto e riprova.
 pause >nul
@@ -56,9 +60,15 @@ echo                 Versione %TDT_VERSION%
 echo ==================================================
 echo.
 echo Profilo selezionato: %preset%
+echo Nessuna installazione software automatica.
 echo.
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Setup.ps1" -Preset "%preset%"
 goto FINE
+
+:SOFTWARE
+cls
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Installa-Software.ps1"
+goto MENU
 
 :TOOLS
 cls
