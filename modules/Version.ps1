@@ -12,19 +12,24 @@ function Get-TDTVersionInfo {
     }
 
     $data = Get-Content -LiteralPath $versionPath -Raw | ConvertFrom-Json
-    $build = 'source'
+    $build = 'unknown'
 
-    # Se il Toolkit e' in un clone Git, usa il commit corrente come Build ID.
-    try {
-        $git = Get-Command git.exe -ErrorAction SilentlyContinue
-        if (-not $git) { $git = Get-Command git -ErrorAction SilentlyContinue }
-        if ($git) {
-            $sha = (& $git.Source -C $Root rev-parse --short=8 HEAD 2>$null | Select-Object -First 1)
-            if ($LASTEXITCODE -eq 0 -and $sha) { $build = ([string]$sha).Trim() }
-        }
+    if ($null -ne $data.PSObject.Properties['build']) {
+        $build = [string]$data.build
     }
-    catch {
-        $build = 'source'
+    else {
+        # Compatibilità con vecchi pacchetti senza build esplicita.
+        try {
+            $git = Get-Command git.exe -ErrorAction SilentlyContinue
+            if (-not $git) { $git = Get-Command git -ErrorAction SilentlyContinue }
+            if ($git) {
+                $sha = (& $git.Source -C $Root rev-parse --short=8 HEAD 2>$null | Select-Object -First 1)
+                if ($LASTEXITCODE -eq 0 -and $sha) { $build = ([string]$sha).Trim() }
+            }
+        }
+        catch {
+            $build = 'unknown'
+        }
     }
 
     [pscustomobject]@{
