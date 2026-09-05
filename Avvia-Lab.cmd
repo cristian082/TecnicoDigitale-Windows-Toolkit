@@ -23,11 +23,10 @@ echo   [1] AUDIT SERVIZI - WINDOWS 11 PRO 25H2
 echo   [2] AUDIT SERVIZI - WINDOWS 11 LTSC 2024
 echo   [3] CONFRONTA ULTIMI AUDIT SERVIZI PRO vs LTSC
 echo.
-echo   [4] LTSC DEEP AUDIT - WINDOWS 11 PRO 25H2
-echo   [5] LTSC DEEP AUDIT - WINDOWS 11 LTSC 2024
+echo   [4] LTSC DEEP AUDIT - RILEVAMENTO AUTOMATICO WINDOWS
 echo.
-echo   [6] APRI CARTELLA REPORT
-echo   [7] ESCI
+echo   [5] APRI CARTELLA REPORT
+echo   [6] ESCI
 echo.
 set "scelta="
 set /p "scelta=Scelta: "
@@ -35,10 +34,9 @@ set /p "scelta=Scelta: "
 if "%scelta%"=="1" goto AUDIT_PRO
 if "%scelta%"=="2" goto AUDIT_LTSC
 if "%scelta%"=="3" goto COMPARE
-if "%scelta%"=="4" goto DEEP_PRO
-if "%scelta%"=="5" goto DEEP_LTSC
-if "%scelta%"=="6" goto REPORTS
-if "%scelta%"=="7" exit /b
+if "%scelta%"=="4" goto DEEP_AUTO
+if "%scelta%"=="5" goto REPORTS
+if "%scelta%"=="6" exit /b
 
 echo.
 echo Scelta non valida.
@@ -80,28 +78,28 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
 
 goto FINE
 
-:DEEP_PRO
+:DEEP_AUTO
 cls
 echo ==============================================================
-echo LTSC DEEP AUDIT - PRO 25H2
-echo ==============================================================
+echo LTSC DEEP AUDIT - RILEVAMENTO AUTOMATICO
+ echo ==============================================================
 echo.
 echo Il test e READ-ONLY: non modifica Windows.
 echo Puo richiedere alcuni minuti.
 echo.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0lab\LTSC-Deep-Audit.ps1" -Label "PRO-25H2"
-goto FINE
 
-:DEEP_LTSC
-cls
-echo ==============================================================
-echo LTSC DEEP AUDIT - LTSC 2024
-echo ==============================================================
+set "DEEP_LABEL="
+for /f "usebackq delims=" %%L in (`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$os=Get-CimInstance Win32_OperatingSystem; if($os.Caption -match 'LTSC'){ 'LTSC-2024' } elseif($os.Caption -match 'Windows 11 Pro'){ 'PRO-25H2' } else { 'WINDOWS-' + $os.BuildNumber }"`) do set "DEEP_LABEL=%%L"
+
+if not defined DEEP_LABEL (
+    echo ERRORE: impossibile rilevare automaticamente l'edizione Windows.
+    goto FINE
+)
+
+echo Sistema rilevato: %DEEP_LABEL%
+echo Il report verra salvato con questa etichetta.
 echo.
-echo Il test e READ-ONLY: non modifica Windows.
-echo Puo richiedere alcuni minuti.
-echo.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0lab\LTSC-Deep-Audit.ps1" -Label "LTSC-2024"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0lab\LTSC-Deep-Audit.ps1" -Label "%DEEP_LABEL%"
 goto FINE
 
 :REPORTS
