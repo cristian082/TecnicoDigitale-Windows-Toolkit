@@ -1,8 +1,12 @@
 function Invoke-TDTGaming {
     [CmdletBinding(SupportsShouldProcess=$true)]
-    param([Parameter(Mandatory)]$Config)
+    param([Parameter(Mandatory)]$Config,[string]$Root)
 
     Write-Host '[Gaming] Configurazione opzioni gaming sicure'
+
+    if (-not $WhatIfPreference -and $Root) {
+        Initialize-TDTGamingOwnership -Root $Root
+    }
 
     if ($Config.EnableGameMode) {
         $gameBar = 'HKCU:\Software\Microsoft\GameBar'
