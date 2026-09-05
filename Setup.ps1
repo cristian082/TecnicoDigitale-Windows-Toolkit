@@ -19,18 +19,13 @@ function Test-Administrator {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-if (-not (Test-Administrator)) {
-    throw 'Eseguire Setup.ps1 da PowerShell come amministratore.'
-}
+if (-not (Test-Administrator)) { throw 'Eseguire Setup.ps1 da PowerShell come amministratore.' }
 
 $presetPath = Join-Path $Root "presets\$Preset.json"
 if (-not (Test-Path $presetPath)) { throw "Preset non trovato: $presetPath" }
 $config = Get-Content $presetPath -Raw | ConvertFrom-Json
 
-# I preset modificano/ottimizzano Windows soltanto.
-# L'installazione software e volutamente separata per rendere i test BEFORE/AFTER puliti
-# e per evitare di installare applicazioni non richieste sui PC dei clienti.
-$moduleOrder = @('Version','Backup','Common','Diagnostics','Restore','Privacy','Explorer','Start-Taskbar','Debloat','Gaming')
+$moduleOrder = @('Version','Backup','Common','ProfileState','Diagnostics','Restore','Privacy','Explorer','Start-Taskbar','Debloat','Gaming')
 foreach ($module in $moduleOrder) {
     $path = Join-Path $Root "modules\$module.ps1"
     if (-not (Test-Path $path)) { throw "Modulo mancante: $path" }
@@ -45,9 +40,14 @@ Write-Host 'Software: nessuna installazione automatica dal preset' -ForegroundCo
 try {
     if ($config.Diagnostics.Enabled) { [void](Invoke-TDTDiagnostics -Config $config.Diagnostics -VersionInfo $script:TDTVersionInfo) }
 
-    # WhatIf deve restare completamente non invasivo: nessun backup viene creato.
-    if (-not $WhatIfPreference) {
-        Initialize-TDTBackupSession -Root $Root -Preset $Preset -VersionInfo $script:TDTVersionInfo
+    if (-not $WhatIfPreference) { Initialize-TDTBackupSession -Root $Root -Preset $Preset -VersionInfo $script:TDTVersionInfo }
+
+    # I preset descrivono lo stato desiderato. Se usciamo da Gaming, ripristiniamo
+    # soltanto le impostazioni che Gaming aveva preso in gestione e solo se sono
+    # ancora al valore applicato dal Toolkit. Eventuali modifiche successive
+    # dell'utente/tecnico non vengono sovrascritte.
+    if ($Preset -ne 'Gaming') {
+        Restore-TDTGamingOwnership -Root $Root -WhatIf:$WhatIfPreference
     }
 
     if ($config.Restore.Enabled) { Invoke-TDTRestore -Config $config.Restore -WhatIf:$WhatIfPreference }
@@ -55,7 +55,7 @@ try {
     if ($config.Explorer.Enabled) { Invoke-TDTExplorer -Config $config.Explorer -WhatIf:$WhatIfPreference }
     if ($config.StartTaskbar.Enabled) { Invoke-TDTStartTaskbar -Config $config.StartTaskbar -WhatIf:$WhatIfPreference }
     if ($config.Debloat.Enabled) { Invoke-TDTDebloat -Config $config.Debloat -WhatIf:$WhatIfPreference }
-    if ($config.Gaming.Enabled) { Invoke-TDTGaming -Config $config.Gaming -WhatIf:$WhatIfPreference }
+    if ($config.Gaming.Enabled) { Invoke-TDTGaming -Config $config.Gaming -Root $Root -WhatIf:$WhatIfPreference }
 
     if (-not $WhatIfPreference) { Complete-TDTBackupSession }
     Write-Host 'Operazione completata. Alcune modifiche richiedono disconnessione o riavvio.' -ForegroundColor Green
