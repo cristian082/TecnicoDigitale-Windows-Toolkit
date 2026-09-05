@@ -66,11 +66,19 @@ try {
     if (-not (Test-Path -LiteralPath (Join-Path $sourcePath 'VERSION.json'))) { throw 'Archivio GitHub non valido: VERSION.json non trovato.' }
     if (-not (Test-Path -LiteralPath (Join-Path $sourcePath 'Avvia-Toolkit.cmd'))) { throw 'Archivio GitHub non valido: Avvia-Toolkit.cmd non trovato.' }
 
-    $remoteVersion='?'; $localVersion='?'
-    try { $remoteVersion=(Get-Content (Join-Path $sourcePath 'VERSION.json') -Raw|ConvertFrom-Json).version } catch {}
-    try { $localVersion=(Get-Content (Join-Path $target 'VERSION.json') -Raw|ConvertFrom-Json).version } catch {}
-    Write-Host ("Versione locale : {0}" -f $localVersion)
-    Write-Host ("Versione remota : {0}" -f $remoteVersion)
+    $remoteVersion='?'; $localVersion='?'; $remoteBuild='?'; $localBuild='?'
+    try {
+        $remoteInfo = Get-Content (Join-Path $sourcePath 'VERSION.json') -Raw | ConvertFrom-Json
+        $remoteVersion = [string]$remoteInfo.version
+        if ($null -ne $remoteInfo.PSObject.Properties['build']) { $remoteBuild = [string]$remoteInfo.build }
+    } catch {}
+    try {
+        $localInfo = Get-Content (Join-Path $target 'VERSION.json') -Raw | ConvertFrom-Json
+        $localVersion = [string]$localInfo.version
+        if ($null -ne $localInfo.PSObject.Properties['build']) { $localBuild = [string]$localInfo.build }
+    } catch {}
+    Write-Host ("Versione locale : {0} (Build {1})" -f $localVersion,$localBuild)
+    Write-Host ("Versione remota : {0} (Build {1})" -f $remoteVersion,$remoteBuild)
     Write-Host ''
 
     Write-Step '[3/5] Aggiornamento file...'
@@ -110,6 +118,7 @@ try {
     'RISULTATO: OK'|Add-Content -LiteralPath $logPath -Encoding UTF8
     Write-Host ''
     Write-Host ("Aggiornamento completato. File aggiornati: {0}" -f $copied) -ForegroundColor Green
+    Write-Host ("Versione installata: {0} (Build {1})" -f $remoteVersion,$remoteBuild) -ForegroundColor Green
     Write-Host ('Log: '+$logPath)
     exit 0
 }
