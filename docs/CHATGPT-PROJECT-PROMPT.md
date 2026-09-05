@@ -51,6 +51,41 @@ Quando lavori su questo progetto:
 - documenta le modifiche importanti;
 - considera il Toolkit ancora in sviluppo e non pronto per l'uso “alla cieca” sui PC clienti finché i test in VM non sono solidi.
 
+## Regola di versioning – IMPORTANTISSIMA
+
+Da ora ogni **build distribuibile/testabile** del Toolkit deve avere un numero diverso.
+
+`VERSION.json` contiene:
+
+- `version`
+- `build`
+- `status`
+- `schemaVersion`
+
+Build corrente:
+
+- versione: `0.1.1`
+- build: `1`
+- status: `development`
+
+Regola pratica: ogni nuova build che deve essere aggiornata/testata incrementa il numero, ad esempio:
+
+`0.1.1 Build 1 → 0.1.2 Build 2 → 0.1.3 Build 3`
+
+Non lasciare più `VERSION.json` invariato dopo modifiche destinate ai test, altrimenti sulla VM non possiamo sapere se stiamo usando davvero l'ultima build.
+
+`modules/Version.ps1` ora legge il build esplicito da `VERSION.json` e il banner deve mostrare qualcosa tipo:
+
+`TecnicoDigitale Windows Toolkit v0.1.1 - Build 1 [development]`
+
+L'updater deve mostrare versione e build sia locale sia remota e, a fine aggiornamento, la versione installata.
+
+Commit versioning:
+
+- `67085ad77bcba3421d4f41142cdf1440110c89f5` — VERSION.json 0.1.1 Build 1
+- `a8a7a2d93183fa42a4fb6a8e5e242cbdd7238994` — Version.ps1 con build esplicita
+- `91369c7b2a8f743c1f43c557b49698c61caf8e54` — updater mostra versione + build
+
 ## Preset
 
 I preset sono profili d'uso, non livelli di aggressività.
@@ -59,59 +94,27 @@ I preset sono profili d'uso, non livelli di aggressività.
 
 Profilo principale per PC cliente sconosciuto.
 
-Deve mantenere funzionanti:
+Deve mantenere funzionanti Office, Edge, WebView2, Defender, Firewall, Windows Update, Store/infrastruttura Microsoft, driver, rete, stampanti, audio, Bluetooth, Windows Search, pagefile e servizi critici.
 
-- Office;
-- Edge;
-- WebView2;
-- Defender;
-- Firewall;
-- Windows Update;
-- Store/infrastruttura Microsoft necessaria;
-- driver;
-- rete;
-- stampanti;
-- audio;
-- Bluetooth;
-- Windows Search;
-- pagefile;
-- servizi critici.
+Può ridurre in modo conservativo suggerimenti/promozioni, Widgets/background consumer, elementi Start/Taskbar/Explorer non utili, temporanei sicuri e startup realmente superfluo.
 
-Può ridurre in modo conservativo:
-
-- animazioni non necessarie;
-- suggerimenti e contenuti promozionali;
-- Widgets/background consumer;
-- alcune attività Edge in background/preload solo se motivate;
-- elementi Start/Taskbar/Explorer non utili;
-- file temporanei sicuri;
-- startup realmente superfluo e identificato con certezza.
-
-**Il preset Standard NON installa più software.**
+**Standard NON installa software.**
 
 ### GAMING
 
-Standard + modifiche gaming sensate e documentabili.
-
-Non usare tweak HPET/timer/scheduler/TCP/core parking/pagefile/mitigazioni.
+Standard + modifiche gaming sensate e documentabili. Niente tweak HPET/timer/scheduler/TCP/core parking/pagefile/mitigazioni.
 
 ### BUSINESS
 
 Standard + affidabilità e controlli orientati al lavoro: BitLocker, Update, sicurezza, licenze, SMART/TRIM/storage, pending reboot, M365/OneDrive e policy supportate.
 
-### PERSONALIZZATA / AVANZATA
-
-Controllo manuale del tecnico.
-
-## Software: ora è separato dai preset
-
-L'installazione software è stata separata da Standard/Gaming/Business per non contaminare i test prestazionali e per lasciare al tecnico la scelta.
+## Software separato dai preset
 
 File principale:
 
 `Installa-Software.ps1`
 
-Software selezionabili attualmente:
+Software selezionabili:
 
 1. Chrome
 2. Firefox
@@ -124,7 +127,7 @@ Software selezionabili attualmente:
 9. Steam
 10. Playnite
 
-Scorciatoie previste:
+Scorciatoie:
 
 - `N` = PC NUOVO
 - `G` = GAMING
@@ -132,17 +135,7 @@ Scorciatoie previste:
 - `A` = installa
 - `0` = esci
 
-Preset rapido PC NUOVO: Chrome, VLC, WinRAR, Everything, Adobe Reader.
-
-Preset rapido GAMING: Chrome, VLC, WinRAR, Everything, Steam, Playnite.
-
-Commit di riferimento della separazione software dai preset:
-
-- Setup/preset: `5b327bd138d1842547ad0ac8cae415f2fdc8b23d`
-- installer selettivo: `fd6989ae8ca5586fe6bbb7c2f78329e303829c16`
-- menu principale con voce software separata: `23b9a743aa9f6f6536368635836964696415edda`
-
-## Menu principale attuale
+## Menu principale
 
 ```text
 [1] STANDARD
@@ -154,47 +147,23 @@ Commit di riferimento della separazione software dai preset:
 [7] ESCI
 ```
 
-## Strumenti rapidi tecnico
-
-Esistono:
-
-- diagnostica rete;
-- flush DNS;
-- cambio DNS rapido;
-- riavvio scheda di rete;
-- reset Spooler/coda stampa;
-- triage processi sospetti read-only.
-
-Il triage processi NON deve dichiarare malware automaticamente: segnala elementi da verificare.
-
 ## Backup / Undo / Restore
 
 Il Toolkit crea un punto di ripristino prima delle modifiche reali e mantiene sessioni Undo JSON.
 
-Gap noti ancora da sistemare:
+Gap noti:
 
-- alcune scritture Active Setup possono non essere ancora incluse completamente nel backup;
+- alcune scritture Active Setup possono non essere completamente incluse nel backup;
 - alcune modifiche Gaming storiche possono bypassare il backup;
 - Undo servizi da completare;
 - migliorare WhatIf/admin/validazione macchina/sessione più recente;
-- verificare bene la gestione dei tipi Registry;
-- verificare che un rifiuto dell'utente alla creazione restore point non lasci effetti collaterali indesiderati.
+- verificare gestione tipi Registry.
 
-## Lab: LTSC rimosso dal flusso operativo
+## Lab generico
 
-La vecchia logica “LTSC vs Pro” non deve più comparire nel laboratorio operativo.
+LTSC è stato rimosso dal flusso operativo.
 
-Sono stati eliminati:
-
-- `lab/LTSC-Deep-Audit.ps1`
-- `lab/Compare-LTSC-Deep-Audit.ps1`
-
-Commit rimozioni:
-
-- `54fad41d33d283f26189acb75d943ddef4de9e8c`
-- `cddf15205fa5e0512e54880dc8bfb2358b87caf9`
-
-Il laboratorio ora usa:
+Il laboratorio usa:
 
 - `lab/Deep-Audit.ps1`
 - `lab/Compare-Baseline.ps1`
@@ -202,65 +171,17 @@ Il laboratorio ora usa:
 - `lab/Compare-Services.ps1`
 - `lab/baselines/Windows11-Pro-Clean-Before-Standard.json`
 
-## Deep Audit generico
-
-`lab/Deep-Audit.ps1` è read-only e produce report JSON in `lab/reports`.
-
-Schema attuale: `SchemaVersion = 4`
-
-Tipo audit: `Windows11-Deep-Audit`
-
-Raccoglie almeno:
-
-- processi;
-- task pianificati;
-- AppX installate;
-- AppX provisioned;
-- optional features;
-- capabilities;
-- programmi installati;
-- startup;
-- servizi;
-- dati sistema selezionati;
-- metriche snapshot.
-
-Metriche principali:
-
-- ProcessCount
-- TotalWorkingSetMB
-- TotalPrivateMemoryMB
-- PhysicalMemoryTotalMB
-- PhysicalMemoryUsedMB
-- PhysicalMemoryFreeMB
-- EnabledScheduledTasks
-- InstalledAppxCount
-- ProvisionedAppxCount
-- EnabledFeatureCount
-- InstalledCapabilityCount
-- StartupItemCount
-- RunningServiceCount
-- EdgeWebViewProcessCount
-- EdgeWebViewWorkingSetMB
-
-Un bug con `Set-StrictMode` e proprietà opzionali tipo `DisplayName` è stato corretto introducendo accesso sicuro alle proprietà.
-
-Commit fix Deep Audit:
-
-`2251a103fdcf7edb98eacb99f9f3b0de7d09722d`
+Deep Audit è read-only e usa `SchemaVersion = 4`.
 
 ## Baseline Windows 11 Pro pulita
 
-Baseline ufficiale del laboratorio:
+Baseline ufficiale:
 
 `lab/baselines/Windows11-Pro-Clean-Before-Standard.json`
 
-Commit baseline:
-
-`9e00f98077108b9c5578b183de63054c999e88da`
-
 Origine: VM Windows 11 Pro build 26200 pulita, prima di Standard.
 
-Snapshot baseline:
+Snapshot baseline principale:
 
 - ProcessCount: 140
 - TotalWorkingSetMB: 4266.26
@@ -279,43 +200,22 @@ Snapshot baseline:
 
 La baseline è un riferimento diagnostico, non uno stato da clonare sui PC clienti.
 
-## Compare-Baseline
-
-`lab/Compare-Baseline.ps1` confronta un Deep Audit corrente con la baseline pulita.
-
-Mostra almeno:
-
-- impatto misurato;
-- processi con conteggio diverso;
-- AppX provisioned rimosse/aggiunte;
-- startup rimosso/aggiunto;
-- servizi con StartMode diverso;
-- software differente dalla baseline.
-
-Genera un JSON `BaselineCompare-<timestamp>.json`.
-
-Un parser error dovuto a sintassi PowerShell troppo compressa è stato corretto riscrivendo il comparatore in forma leggibile e compatibile.
-
-Commit fix comparatore:
-
-`0e0e743ff823428ae7491f82d6e483af412938ad`
-
-## Primo confronto Standard pulito riuscito
+## Standard: primo test pulito SUPERATO
 
 VM:
 
 - Windows 11 Pro
 - build 26200
 - VirtualBox
-- RAM 8173 MB circa
+- circa 8 GB RAM
 
-Dopo Standard + riavvio + Deep Audit, primo confronto pulito utilizzabile:
+Dopo Standard + riavvio + Deep Audit:
 
-- processi: 140 → 132 = **-8**
-- Working Set aggregato: 4266.26 → 3822.48 MB = **-443.78 MB**
-- Private Memory: 1714.29 → 1515.79 MB = **-198.50 MB**
-- RAM fisica usata: 2886 → 2709 MB = **-177 MB**
-- RAM fisica libera: 5287 → 5464 MB = **+177 MB**
+- processi: 140 → 132 = -8
+- Working Set aggregato: 4266.26 → 3822.48 MB = -443.78 MB
+- Private Memory: 1714.29 → 1515.79 MB = -198.50 MB
+- RAM fisica usata: 2886 → 2709 MB = -177 MB
+- RAM fisica libera: 5287 → 5464 MB = +177 MB
 - task abilitati: 212 → 213 = +1
 - AppX installate: 115 → 117 = +2
 - AppX provisioned: 47 → 47 = 0
@@ -323,133 +223,111 @@ Dopo Standard + riavvio + Deep Audit, primo confronto pulito utilizzabile:
 - capability installate: 47 → 47 = 0
 - startup: 6 → 6 = 0
 - servizi running: 88 → 88 = 0
-- Edge/WebView processi: 16 → 13 = **-3**
-- Edge/WebView Working Set: 865.51 → 773.47 MB = **-92.04 MB**
+- Edge/WebView processi: 16 → 13 = -3
+- Edge/WebView Working Set: 865.51 → 773.47 MB = -92.04 MB
 
-Differenze runtime interessanti:
+Differenze runtime utili osservate:
 
-- `WidgetBoard`: 1 → 0
-- `WidgetService`: 1 → 0
-- `RuntimeBroker`: 3 → 1
-- `msedge`: 10 → 7
+- WidgetBoard: 1 → 0
+- WidgetService: 1 → 0
+- RuntimeBroker: 3 → 1
+- msedge: 10 → 7
 
-Nessuna differenza strutturale in startup, AppX provisioned o software installato/rimosso nel test pulito.
+Nessuna differenza strutturale in startup, AppX provisioned o software installato/rimosso.
 
-Da NON interpretare in modo affrettato: RAM/processi sono snapshot runtime e possono variare.
+Conclusione operativa: **Standard è promosso come primo test VM pulito riuscito**. Le metriche RAM/processi restano snapshot runtime e non vanno trattate come valori assoluti garantiti.
 
-## Servizi da investigare nel confronto
+## BITS / MDCoreSvc
 
 Il comparatore ha segnalato:
 
 - `BITS`: Baseline `Auto`, Attuale `Manual/Absent`
 - `MDCoreSvc`: Baseline `Manual/Absent`, Attuale `Auto`
 
-NON concludere automaticamente che Standard abbia modificato questi servizi.
+Non esiste nel codice Standard corrente una modifica intenzionale di questi servizi. Non assumere che Standard li abbia cambiati. Potrebbero essere variazioni Windows oppure un limite del modello compatto `Manual/Absent` del comparatore.
 
-La filosofia del progetto vieta di alterare BITS/Windows Update senza ragione. Prima di cambiare Standard bisogna verificare se:
+Da migliorare in futuro la rappresentazione dei servizi nel baseline/comparatore per distinguere chiaramente `Manual` da `Absent`.
 
-- è semplice variazione/runtime/trigger-start;
-- la baseline compatta rappresenta male alcuni stati;
-- il comparatore normalizza male `Manual/Absent`;
-- esiste davvero una modifica causata dal Toolkit.
+## Icone Desktop in Standard – nuova build da testare
 
-## Updater: stato attuale e bug recenti
+È stata aggiunta a `modules/Explorer.ps1` la gestione delle icone Desktop di sistema e `Standard.json` abilita `DesktopIconsByEdition`.
+
+Non vengono creati collegamenti `.lnk`: vengono usate le icone di sistema Windows tramite le chiavi Desktop/HideDesktopIcons, con backup Undo tramite il sistema Registry del Toolkit.
+
+Comportamento atteso:
+
+### Windows Home / Consumer
+
+- Questo PC
+- File utente
+- Cestino
+
+### Windows Pro / Business
+
+- Questo PC
+- File utente
+- Cestino
+- Rete
+- Pannello di controllo
+
+Commit:
+
+- `11eccb761bf89a3c8ef8e7ccf952f203250db7b0` — Explorer desktop icons
+- `47e6d2c5cdc337e003fc78dc3697249fe84e2aaf` — Standard abilita DesktopIconsByEdition
+- `db07bf9d12b7edaa2b8a72348495c455a3cb1ace` — documentazione Explorer
+
+**Test immediato previsto:** aggiornare la VM e rilanciare Standard sopra Standard. Questo serve contemporaneamente a verificare le icone e l'idempotenza del preset.
+
+Sulla VM Windows 11 Pro ci aspettiamo: Questo PC, File utente, Cestino, Rete e Pannello di controllo. Se Explorer non ridisegna subito, provare F5 e poi eventualmente disconnessione/riavvio.
+
+## Updater: bug recenti e stato
 
 File:
 
 - `Aggiorna-Toolkit.cmd`
 - `Update-Toolkit.ps1`
 
-Architettura updater:
+Architettura:
 
 - scarica `main.zip` da GitHub;
-- forza TLS 1.2 se possibile;
 - estrae in TEMP;
-- valida almeno `VERSION.json` e `Avvia-Toolkit.cmd`;
-- copia i file del repository;
+- valida VERSION.json e Avvia-Toolkit.cmd;
+- copia la repo;
 - preserva backup/log/report e `lab/reports`;
-- rimuove script LTSC obsoleti;
-- verifica file obbligatori al termine;
+- rimuove componenti LTSC obsoleti;
+- verifica i file obbligatori;
 - scrive `Aggiornamento-Toolkit.log`.
 
-### Bug 1: vecchio `GetFullPath`
+Bug già incontrati:
 
-Una copia locale vecchia continuava a mostrare errori `GetFullPath`, mentre il file corrente in repo non conteneva più quella chiamata. Questo ha evidenziato che la VM stava eseguendo una copia updater non aggiornata.
+1. vecchia copia locale con errore `GetFullPath`;
+2. calcolo relativo errato che copiava tutta la repo in `C:\TecnicoDigitale-Windows-Toolkit-main\n\`;
+3. confronto fragile tra path TEMP lungo `C:\Users\Win11 Pro\...` e alias 8.3 `C:\Users\WIN11P~1\...`.
 
-### Bug 2: cartella spuria `n`
+Fix principali:
 
-Un errore nel calcolo del percorso relativo ha copiato **l'intero repository** dentro:
+- `b334edf82b811faf27cdeafdcabb087a828c3933` — riconoscimento/rimozione sicura cartella spuria `n`;
+- `30d1bb43217c2142a593e99b810ddbd6a59bcee0` — eliminazione del confronto fragile tra path lungo e alias 8.3;
+- `91369c7b2a8f743c1f43c557b49698c61caf8e54` — visualizzazione versione + build locale/remota/installata.
 
-`C:\TecnicoDigitale-Windows-Toolkit-main\n\`
+All'ultimo aggiornamento del prompt l'updater sembrava finalmente procedere correttamente, ma il test completo finale va comunque confermato dalla VM.
 
-La cartella `n` conteneva root, `docs`, `lab`, `modules`, `presets`, ecc.
+## Strumenti rapidi tecnico
 
-L'updater è stato modificato per riconoscere e rimuovere automaticamente `n` SOLO se contiene la firma completa di una copia Toolkit, così da non cancellare una normale cartella utente chiamata `n`.
+Esistono:
 
-Commit relativo:
+- diagnostica rete;
+- flush DNS;
+- cambio DNS rapido;
+- riavvio scheda di rete;
+- reset Spooler/coda stampa;
+- triage processi sospetti read-only.
 
-`b334edf82b811faf27cdeafdcabb087a828c3933`
+Il triage non deve dichiarare malware automaticamente: segnala elementi da verificare.
 
-### Bug 3: path TEMP lungo vs alias 8.3
+## Software/bloatware
 
-Successivo errore reale:
-
-```text
-Percorso sorgente inatteso:
-'C:\Users\Win11 Pro\AppData\Local\Temp\...\TecnicoDigitale-Windows-Toolkit-main\Aggiorna-Toolkit.cmd'
-non e sotto
-'C:\Users\WIN11P~1\AppData\Local\Temp\...\TecnicoDigitale-Windows-Toolkit-main'
-```
-
-Windows rappresentava la stessa cartella TEMP in due modi:
-
-- percorso lungo: `C:\Users\Win11 Pro\...`
-- alias 8.3: `C:\Users\WIN11P~1\...`
-
-Il confronto stringa dei path assoluti era quindi fragile.
-
-È stato cambiato approccio: l'updater non deve più validare i file confrontando queste due rappresentazioni assolute del TEMP; deve enumerare/copiare relativamente alla directory sorgente per eliminare il problema alla radice.
-
-Ultimo commit updater:
-
-`30d1bb43217c2142a593e99b810ddbd6a59bcee0`
-
-**Stato importantissimo:** al momento di aggiornare questo prompt, il commit `30d1bb...` è stato scritto in repo ma deve ancora essere confermato con un test reale completo in VM.
-
-Poiché un updater che fallisce prima della copia non riesce ad aggiornare se stesso, in questa fase può essere necessario sostituire manualmente `Update-Toolkit.ps1` una volta e poi rilanciare `Aggiorna-Toolkit.cmd`.
-
-Se anche la nuova strategia fallisce, NON continuare con rattoppi infiniti: valutare un updater più semplice e robusto.
-
-## VERSION.json
-
-Attualmente la versione è ancora `0.1.0`.
-
-Questo significa che `Versione locale` e `Versione remota` possono risultare entrambe `0.1.0` anche quando i commit sono diversi. In futuro migliorare versioning/manifest o rilevamento build/commit.
-
-## Avvia-Lab.cmd
-
-Menu attuale circa:
-
-```text
-[1] CREA DEEP AUDIT SISTEMA ATTUALE
-[2] CONFRONTA ULTIMO AUDIT CON BASELINE WINDOWS 11 PRO
-[3] AUDIT SERVIZI SISTEMA ATTUALE
-[4] APRI CARTELLA REPORT
-[5] APRI CARTELLA BASELINE
-[0] ESCI
-```
-
-Per il normale test BEFORE/AFTER Standard:
-
-`Standard → riavvio → [1] Deep Audit → [2] Confronto Baseline`
-
-L'audit servizi è un approfondimento separato.
-
-Da migliorare eventualmente le etichette del menu per renderlo ancora più chiaro.
-
-## Regola software/bloatware
-
-Classificare software in:
+Classificare in:
 
 - SAFE REMOVE
 - ASK
@@ -459,64 +337,9 @@ Regola:
 
 > Non rimuovere automaticamente software scelto o utilizzato dall'utente. Rimuovere software identificato con elevata certezza come promozionale, trial, sponsorizzato o bloat OEM, purché la rimozione non comprometta Windows, driver, sicurezza o funzionalità hardware.
 
-Esempi:
-
-- Office configurato → PROTECTED
-- M365 promo/trial non configurato → SAFE REMOVE solo con identificazione certa
-- McAfee/Norton OEM trial → candidato, ma verificare il ritorno di Defender
-- utility OEM firmware/hotkey/batteria/driver → PROTECTED o ASK
-
-## UX desiderata
-
-Prima di applicare modifiche, arrivare in futuro a una UX tipo:
-
-```text
-Profilo selezionato: STANDARD
-12 ottimizzazioni consigliate
-3 opzionali
-2 non applicabili
-[V] Mostra cosa verrà modificato
-[A] Applica
-[I] Indietro
-```
-
-Ogni modifica dovrebbe avere un ID stabile e spiegabile, ad esempio:
-
-```text
-EDGE-001 — Disattiva Startup Boost
-Motivo: Chrome rilevato come browser principale; Edge non utilizzato.
-Impatto previsto: basso
-Rischio: basso
-Reversibile: sì
-```
-
-ID/documentazione desiderati come:
-
-- EXPLORER-001
-- PRIVACY-003
-- SERVICES-004
-- EDGE-001
-- NETWORK-001
-- PRINT-001
-
-Ogni documentazione deve spiegare:
-
-- nome;
-- comportamento stock;
-- modifica;
-- motivo;
-- cosa NON viene cambiato;
-- effetti collaterali;
-- impatto;
-- rischio;
-- reversibilità;
-- preset coinvolti;
-- versioni Windows testate;
-- implementazione.
-
 ## Check rapido / Semaforo Tecnico
 
-Da sviluppare una vista sintetica con stati `OK / ATTENZIONE / PROBLEMA` per categorie come:
+Da sviluppare una vista sintetica `OK / ATTENZIONE / PROBLEMA` per:
 
 - PRESTAZIONI
 - SICUREZZA
@@ -529,115 +352,54 @@ Da sviluppare una vista sintetica con stati `OK / ATTENZIONE / PROBLEMA` per cat
 - SOFTWARE
 - SPAZIO DISCO
 
-Controlli utili:
-
-- edizione Windows;
-- attivazione;
-- Office;
-- Defender;
-- Firewall;
-- UAC;
-- SMART;
-- TRIM;
-- spazio libero;
-- pending reboot;
-- startup;
-- RAM idle;
-- software promozionale;
-- temporanei;
-- OneDrive;
-- BitLocker.
-
-## Diagnostica attuale
-
-Esistono funzioni per raccogliere informazioni su:
-
-- hardware/BIOS;
-- Windows;
-- CPU;
-- RAM;
-- dischi/spazio libero;
-- TRIM;
-- startup;
-- Defender;
-- Firewall;
-- UAC;
-- BitLocker;
-- licenze Windows/Office.
-
-Da migliorare in futuro:
-
-- channel/expiration licenze;
-- SMART/temperature;
-- pending reboot;
-- Windows Update;
-- pagefile;
-- moduli RAM;
-- Secure Boot/VBS/Core Isolation;
-- report HTML;
-- robustezza TRIM localizzato.
-
-## Conclusione attuale sui servizi
-
-Non esiste finora una giustificazione per fare mass-disable dei servizi Windows.
-
-Le differenze utili osservate vengono soprattutto da:
-
-- meno componenti consumer attivi;
-- meno processi Widgets/Edge/background;
-- riduzione di alcuni componenti di avvio/runtime.
-
-Lo stato runtime dei servizi può variare tra snapshot, quindi non generalizzare da una singola differenza.
+Controlli utili: edizione Windows, attivazione, Office, Defender, Firewall, UAC, SMART, TRIM, spazio libero, pending reboot, startup, RAM idle, software promozionale, temporanei, OneDrive e BitLocker.
 
 ## Edge/WebView
 
 Possibili candidati futuri da testare A/B:
 
-- EDGE-001 Startup Boost condizionale se Chrome/Firefox è browser principale;
+- EDGE-001 Startup Boost condizionale;
 - EDGE-002 app/estensioni Edge in background;
 - EDGE-003 preload/AutoLaunch da investigare;
 - EDGE-004 Edge Update da NON toccare;
 - EDGE-005 WebView2 da NON toccare.
 
-Nessuna modifica deve essere aggiunta senza prova misurabile e controllo regressioni.
+Nessuna modifica senza prova misurabile e controllo regressioni.
 
-## VM di test attuale
+## VM di test
 
 - Windows 11 Pro
 - build 26200
 - VirtualBox
 - circa 8 GB RAM
-- CPU virtuali su host Ryzen 7 7700
+- host Ryzen 7 7700
 - TPM 2.0
 - EFI
 - Secure Boot
 
-Il laboratorio deve restare ripetibile tramite snapshot puliti.
-
 ## Prossimi passi immediati
 
-1. Testare il nuovo updater commit `30d1bb43217c2142a593e99b810ddbd6a59bcee0` nella VM.
-2. Verificare che aggiorni i file nella root corretta.
-3. Verificare che la cartella spuria `n` venga eliminata.
-4. Verificare che `lab`, `modules`, `presets`, `docs` siano realmente aggiornati.
-5. Se updater fallisce ancora per path, semplificare radicalmente l'architettura invece di aggiungere altri workaround.
-6. Investigare BITS e MDCoreSvc nel confronto baseline senza assumere che Standard li abbia modificati.
-7. Non cambiare Standard finché non capiamo se quelle differenze sono reali o artefatti del confronto.
-8. Migliorare in seguito versioning/manifest updater.
-9. Migliorare eventualmente le etichette del menu Lab.
-10. Continuare il ciclo misurato: snapshot pulito → Standard → riavvio → Deep Audit → Compare Baseline → analisi regressioni.
+1. Completare il test dell'updater e verificare che mostri correttamente `0.1.1 Build 1` come remoto/installato.
+2. Verificare che la vecchia cartella `n` sia sparita e che root/modules/presets/lab/docs siano aggiornati correttamente.
+3. Rilanciare **Standard sopra Standard** sulla VM già ottimizzata.
+4. Verificare su Windows 11 Pro la comparsa di Questo PC, File utente, Cestino, Rete e Pannello di controllo.
+5. Usare questa seconda esecuzione come test di **idempotenza Standard**: nessun errore, nessun effetto cumulativo indesiderato.
+6. Se utile, fare un Deep Audit dopo la seconda Standard per controllare che non emergano regressioni.
+7. Migliorare successivamente il comparatore servizi per distinguere `Manual` e `Absent`.
+8. Poi iniziare il **Check rapido / Semaforo Tecnico**.
 
 ## Nota di perimetro
 
-Questo prompt riguarda **esclusivamente TecnicoDigitale Windows Toolkit**.
+Questo prompt riguarda esclusivamente TecnicoDigitale Windows Toolkit.
 
 NON riguarda rEFInd, dual boot, Batocera, Home Assistant, hardware domestico o altri progetti.
 
 Quando ricevi questo prompt in una nuova chat:
 
 1. leggi prima lo stato attuale del repository `cristian082/TecnicoDigitale-Windows-Toolkit`;
-2. verifica in particolare `Update-Toolkit.ps1`, `lab/Deep-Audit.ps1`, `lab/Compare-Baseline.ps1`, `Avvia-Lab.cmd` e `VERSION.json`;
-3. dimmi brevemente dove siamo arrivati;
-4. riprendi dal test updater e dal laboratorio Standard pulito senza reinventare il progetto.
+2. verifica soprattutto `VERSION.json`, `Update-Toolkit.ps1`, `modules/Explorer.ps1`, `presets/Standard.json`, `lab/Deep-Audit.ps1` e `lab/Compare-Baseline.ps1`;
+3. controlla che ogni nuova build testabile incrementi versione/build;
+4. dimmi brevemente dove siamo arrivati;
+5. riprendi dal test Standard-sopra-Standard con icone Desktop e idempotenza.
 
 ---
