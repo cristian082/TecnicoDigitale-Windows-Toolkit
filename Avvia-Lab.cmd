@@ -1,17 +1,13 @@
 @echo off
 setlocal EnableExtensions
 cd /d "%~dp0"
-
 set "TDT_VERSION=sconosciuta"
 for /f "usebackq delims=" %%V in (`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$v=Get-Content '%~dp0VERSION.json' -Raw|ConvertFrom-Json; $v.version"`) do set "TDT_VERSION=%%V"
-
-:: Il laboratorio usa privilegi elevati per ottenere dati completi e coerenti.
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd.exe -Verb RunAs -ArgumentList '/c ""%~f0""'"
-    exit /b
+ powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd.exe -Verb RunAs -ArgumentList '/c ""%~f0""'"
+ exit /b
 )
-
 :MENU
 cls
 echo ==============================================================
@@ -19,99 +15,54 @@ echo       TECNICO DIGITALE - TEST LAB
 echo                Toolkit v%TDT_VERSION%
 echo ==============================================================
 echo.
-echo   [1] AUDIT SERVIZI - WINDOWS 11 PRO 25H2
-echo   [2] AUDIT SERVIZI - WINDOWS 11 LTSC 2024
-echo   [3] CONFRONTA ULTIMI AUDIT SERVIZI PRO vs LTSC
-echo.
-echo   [4] DEEP AUDIT - RILEVAMENTO AUTOMATICO WINDOWS
-echo   [5] CONFRONTA ULTIMI DEEP AUDIT PRO vs LTSC
-echo.
-echo   [6] APRI CARTELLA REPORT
-echo   [7] ESCI
+echo   [1] CREA DEEP AUDIT SISTEMA ATTUALE
+echo   [2] CONFRONTA ULTIMO AUDIT CON BASELINE WINDOWS 11 PRO
+echo   [3] AUDIT SERVIZI SISTEMA ATTUALE
+echo   [4] APRI CARTELLA REPORT
+echo   [5] APRI CARTELLA BASELINE
+echo   [0] ESCI
 echo.
 set "scelta="
 set /p "scelta=Scelta: "
-
-if "%scelta%"=="1" goto AUDIT_PRO
-if "%scelta%"=="2" goto AUDIT_LTSC
-if "%scelta%"=="3" goto COMPARE
-if "%scelta%"=="4" goto DEEP_AUTO
-if "%scelta%"=="5" goto DEEP_COMPARE
-if "%scelta%"=="6" goto REPORTS
-if "%scelta%"=="7" exit /b
-
-echo.
-echo Scelta non valida.
-pause
-goto MENU
-
-:AUDIT_PRO
+if "%scelta%"=="1" goto DEEP
+if "%scelta%"=="2" goto BASELINE_COMPARE
+if "%scelta%"=="3" goto SERVICES
+if "%scelta%"=="4" goto REPORTS
+if "%scelta%"=="5" goto BASELINES
+if "%scelta%"=="0" exit /b
+echo Scelta non valida.&pause&goto MENU
+:DEEP
 cls
 echo ==============================================================
-echo AUDIT SERVIZI - PRO 25H2
+echo DEEP AUDIT - SISTEMA ATTUALE - READ ONLY
 echo ==============================================================
 echo.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0lab\Services-Audit.ps1" -Label "PRO-25H2"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0lab\Deep-Audit.ps1" -Label "CURRENT"
 goto FINE
-
-:AUDIT_LTSC
+:BASELINE_COMPARE
 cls
 echo ==============================================================
-echo AUDIT SERVIZI - LTSC 2024
+echo CONFRONTO BASELINE WINDOWS 11 PRO vs SISTEMA ATTUALE
 echo ==============================================================
 echo.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0lab\Services-Audit.ps1" -Label "LTSC-2024"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$reports=Join-Path '%~dp0' 'lab\reports'; $current=Get-ChildItem $reports -Filter 'DeepAudit-*.json' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if(-not $current){Write-Host 'ERRORE: nessun Deep Audit trovato. Esegui prima opzione [1].' -ForegroundColor Red; exit 2}; $baseline=Join-Path '%~dp0' 'lab\baselines\Windows11-Pro-Clean-Before-Standard.json'; if(-not(Test-Path $baseline)){Write-Host 'ERRORE: baseline Windows 11 Pro non trovata.' -ForegroundColor Red; exit 3}; Write-Host ('BASELINE: ' + $baseline); Write-Host ('ATTUALE : ' + $current.FullName); Write-Host ''; & '%~dp0lab\Compare-Baseline.ps1' -BaselinePath $baseline -CurrentPath $current.FullName -OutputDirectory $reports"
 goto FINE
-
-:COMPARE
+:SERVICES
 cls
 echo ==============================================================
-echo CONFRONTO ULTIMI AUDIT - LTSC 2024 vs PRO 25H2
+echo AUDIT SERVIZI - SISTEMA ATTUALE - READ ONLY
 echo ==============================================================
 echo.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$reports=Join-Path '%~dp0' 'lab\reports'; $l=Get-ChildItem $reports -Filter 'Services-LTSC-2024-*.json' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; $p=Get-ChildItem $reports -Filter 'Services-PRO-25H2-*.json' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if(-not $l -or -not $p){Write-Host 'ERRORE: servono almeno un report LTSC e uno PRO in lab\reports.' -ForegroundColor Red; exit 2}; Write-Host ('LTSC: ' + $l.Name); Write-Host ('PRO : ' + $p.Name); Write-Host ''; & '%~dp0lab\Compare-Services.ps1' -ReferencePath $l.FullName -CandidatePath $p.FullName"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0lab\Services-Audit.ps1" -Label "CURRENT"
 goto FINE
-
-:DEEP_AUTO
-cls
-echo ==============================================================
-echo DEEP AUDIT - RILEVAMENTO AUTOMATICO
-echo ==============================================================
-echo.
-echo Il test e READ-ONLY: non modifica Windows.
-echo Puo richiedere alcuni minuti.
-echo.
-
-set "DEEP_LABEL="
-for /f "usebackq delims=" %%L in (`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$os=Get-CimInstance Win32_OperatingSystem; if($os.Caption -match 'LTSC'){ 'LTSC-2024' } elseif($os.Caption -match 'Windows 11 Pro'){ 'PRO-25H2' } else { 'WINDOWS-' + $os.BuildNumber }"`) do set "DEEP_LABEL=%%L"
-
-if not defined DEEP_LABEL (
-    echo ERRORE: impossibile rilevare automaticamente l'edizione Windows.
-    goto FINE
-)
-
-echo Sistema rilevato: %DEEP_LABEL%
-echo Il report verra salvato con questa etichetta.
-echo.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0lab\LTSC-Deep-Audit.ps1" -Label "%DEEP_LABEL%"
-goto FINE
-
-:DEEP_COMPARE
-cls
-echo ==============================================================
-echo CONFRONTO ULTIMI DEEP AUDIT - LTSC 2024 vs PRO 25H2
-echo ==============================================================
-echo.
-echo Cerca automaticamente i report piu recenti in lab\reports.
-echo.
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$reports=Join-Path '%~dp0' 'lab\reports'; $l=Get-ChildItem $reports -Filter 'DeepAudit-LTSC-2024-*.json' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; $p=Get-ChildItem $reports -Filter 'DeepAudit-PRO-25H2-*.json' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if(-not $l -or -not $p){Write-Host 'ERRORE: servono almeno un DeepAudit LTSC e uno PRO in lab\reports.' -ForegroundColor Red; Write-Host 'Copia i due JSON nella cartella lab\reports e riprova.' -ForegroundColor Yellow; exit 2}; Write-Host ('LTSC: ' + $l.Name); Write-Host ('PRO : ' + $p.Name); Write-Host ''; & '%~dp0lab\Compare-LTSC-Deep-Audit.ps1' -ReferencePath $l.FullName -CandidatePath $p.FullName -OutputDirectory $reports"
-goto FINE
-
 :REPORTS
 if not exist "%~dp0lab\reports" mkdir "%~dp0lab\reports"
 start "" "%~dp0lab\reports"
 goto MENU
-
+:BASELINES
+if not exist "%~dp0lab\baselines" mkdir "%~dp0lab\baselines"
+start "" "%~dp0lab\baselines"
+goto MENU
 :FINE
 echo.
 echo ==============================================================
