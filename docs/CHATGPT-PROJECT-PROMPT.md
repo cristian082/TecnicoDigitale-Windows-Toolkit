@@ -16,7 +16,7 @@ Il Toolkit deve essere sicuro su PC cliente sconosciuti. Non disabilitare Defend
 - Ogni build testabile incrementa `version` e `build`.
 
 ## Versione corrente
-`v0.1.5 - Build 5 [development]`.
+`v0.1.7 - Build 7 [development]`.
 
 ## Preset e transizioni
 STANDARD = base sicura. GAMING = Standard + estensioni Gaming. BUSINESS = Standard + estensioni Business.
@@ -41,23 +41,30 @@ Su Windows 11 Pro build 26200 / VirtualBox:
 - Standard → Gaming: PASS.
 - Gaming → Business: PASS; i valori Gaming sono tornati esattamente allo stato precedente.
 - Business Build 4: Start a sinistra PASS.
-- Business → Standard: PASS; Start tornato centrato, `TaskbarAl` rimosso perché prima di Business non esisteva, `GameDVR_Enabled=1`, nessun residuo Gaming.
-- Matrice completa `Standard → Gaming → Business → Standard`: PASS.
+- Business → Standard: PASS al termine dell'esecuzione; Start tornato centrato, `TaskbarAl` rimosso perché prima di Business non esisteva, `GameDVR_Enabled=1`, nessun residuo Gaming.
 
-Durante l'ultimo controllo `ProfileState.json` mostrava `Business: []` invece di `Business: null`, pur con ownership già vuota. Build 5 corregge solo questa normalizzazione, rimuovendo il wrapping che faceva sopravvivere un array vuoto nel risultato di `Restore-TDTOwnedRegistryEntries`.
+### Bug scoperto dopo la matrice
+Dopo un login successivo, nonostante Standard fosse stato applicato correttamente, Start e tornato a sinistra.
 
-Commit Build 5:
-- `d810b2dfb34bc37a5c95d508c8573ee03a5005a9` — normalizza ownership vuota a `null`.
-- `09ab83d1b44487662078e0ce4a9a94e5bb237b85` — v0.1.5 Build 5.
+Causa: le build precedenti usavano `Set-TDTUserDword` con `AllUsers=true` anche per `TaskbarAl`. Business quindi registrava un componente Active Setup HKLM che, al login successivo, rieseguiva `reg.exe add ... TaskbarAl=0`. Questo avveniva fuori da ProfileState e poteva riapplicare Business dopo che Standard aveva correttamente rimosso `TaskbarAl`.
 
-## Business Build 4
-Build 4 ha corretto `presets/Business.json` a `LeftAlignTaskbar=true` e introdotto ownership reversibile di `TaskbarAl`.
+Build 7 corregge il problema:
+- `TaskbarAl` Business viene applicato solo all'utente corrente (`AllUsers=false`) ed e gestito esclusivamente da ProfileState.
+- Aggiunto helper per individuare/rimuovere l'Active Setup deterministico creato dal Toolkit.
+- Migrazione Build 7: se esiste il vecchio Active Setup `TaskbarAl`, viene rimosso. Se si entra in Standard/Gaming e quel vecchio componente ha lasciato `TaskbarAl=0`, il residuo viene rimosso con backup della sessione, riportando il comportamento Windows predefinito centrato.
+- Non vengono rimossi componenti Active Setup non riconosciuti come `TecnicoDigitale`.
 
-Commit principali:
-- `fca9b990ea490ed73d46de6387e0e7b49635d4f1` — ownership Business TaskbarAl.
-- `6dd0d191d578cdc54a473f65a8a008ba4fb7b99c` — Setup gestisce entrata/uscita Business.
-- `d6ab55eb5e994acb45bbefe17ef4b9d262b5b343` — Business Start a sinistra.
-- `eb6b555e66d9bab25d20d7a8279c65aac0af1689` — v0.1.4 Build 4.
+Commit Build 7:
+- `d2bde95c5d3d971a244f4a0e58be5bf69445d3a6` — helper cleanup Active Setup.
+- `2fc24aa03037abd7be212cb4dd298b5c02754763` — TaskbarAl solo utente corrente + migrazione residuo.
+- `0169570746d7b346a5996fc1f16097424066dae6` — v0.1.7 Build 7.
+
+## Visual Effects Build 6
+Build 6 ha introdotto un alleggerimento conservativo comune ai preset, senza usare `UserPreferencesMask` globale:
+- VISUAL-001: animazione minimizza/massimizza disattivata.
+- VISUAL-002: animazioni taskbar disattivate.
+- VISUAL-003: `MenuShowDelay=100`.
+Restano intatti font smussati, miniature, ombre e trasparenze.
 
 ## Icone Desktop
 Standard/Gaming: Questo PC, File utente, Cestino; Rete e Pannello di controllo nascosti.
@@ -68,13 +75,29 @@ Le icone sono namespace Windows via `HideDesktopIcons`, non `.lnk`.
 Le scritture Gaming e Business gestite dal ProfileState passano anche dal backup Registry della sessione. Gap aperti: Active Setup non completamente coperto dall'Undo; Undo servizi futuro; migliorare UX selezione sessione.
 
 ## Software
-I preset non installano software. `Installa-Software.ps1` è separato: Chrome, Firefox, VLC, WinRAR, 7-Zip, Everything, Adobe Reader, SumatraPDF, Steam, Playnite.
+I preset non installano software. `Installa-Software.ps1` e separato: Chrome, Firefox, VLC, WinRAR, 7-Zip, Everything, Adobe Reader, SumatraPDF, Steam, Playnite.
+
+## Strumenti Tecnico attuali
+`modules/TechnicianTools.ps1` include:
+- diagnostica rete;
+- flush DNS;
+- cambio DNS rapido;
+- riavvio scheda di rete;
+- reset spooler/coda;
+- triage processi sospetti read-only.
 
 ## Standard baseline
-VM Windows 11 Pro build 26200, VirtualBox, ~8 GB. Primo test pulito Standard: processi 140→132; RAM fisica 2886→2709 MB; startup 6→6; servizi running 88→88; Edge/WebView 16→13; AppX provisioned 47→47; feature 14→14; capability 47→47. BITS/MDCoreSvc hanno mostrato differenze runtime ma nessuna modifica intenzionale Standard è presente nel codice.
+VM Windows 11 Pro build 26200, VirtualBox, ~8 GB. Primo test pulito Standard: processi 140→132; RAM fisica 2886→2709 MB; startup 6→6; servizi running 88→88; Edge/WebView 16→13; AppX provisioned 47→47; feature 14→14; capability 47→47. BITS/MDCoreSvc hanno mostrato differenze runtime ma nessuna modifica intenzionale Standard e presente nel codice.
 
 ## Lab
 Usare `lab/Deep-Audit.ps1`, `Compare-Baseline.ps1`, `Services-Audit.ps1`, `Compare-Services.ps1` e baseline `Windows11-Pro-Clean-Before-Standard.json`. LTSC rimosso dal flusso operativo.
 
-## Prossimo sviluppo immediato
-Conclusa la matrice preset, il prossimo lavoro è alleggerire le visualizzazioni/animazioni di Windows in modo conservativo e misurabile, senza introdurre tweak aggressivi o peggiorare accessibilità/leggibilità.
+## Test immediato Build 7
+Aggiornare la VM a Build 7 e rilanciare Standard. Verificare:
+1. log con v0.1.7 Build 7;
+2. eventuale riga `[Start/Taskbar] Rimosso residuo TaskbarAl della vecchia gestione Active Setup.`;
+3. Start centrato;
+4. `(Get-ItemProperty ... -Name TaskbarAl -ErrorAction SilentlyContinue).TaskbarAl` senza output;
+5. dopo logout/login o riavvio Start deve restare centrato.
+
+Solo dopo questo retest il bug post-login puo essere considerato chiuso.
