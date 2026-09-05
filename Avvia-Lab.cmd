@@ -1,0 +1,88 @@
+@echo off
+setlocal EnableExtensions
+cd /d "%~dp0"
+
+set "TDT_VERSION=sconosciuta"
+for /f "usebackq delims=" %%V in (`powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$v=Get-Content '%~dp0VERSION.json' -Raw|ConvertFrom-Json; $v.version"`) do set "TDT_VERSION=%%V"
+
+:: Il laboratorio usa privilegi elevati per ottenere dati completi e coerenti.
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd.exe -Verb RunAs -ArgumentList '/c ""%~f0""'"
+    exit /b
+)
+
+:MENU
+cls
+echo ==============================================================
+echo       TECNICO DIGITALE - TEST LAB
+ echo                Toolkit v%TDT_VERSION%
+echo ==============================================================
+echo.
+echo   [1] AUDIT SERVIZI - WINDOWS 11 PRO 25H2
+echo   [2] AUDIT SERVIZI - WINDOWS 11 LTSC 2024
+echo   [3] CONFRONTA ULTIMI AUDIT PRO vs LTSC
+echo   [4] APRI CARTELLA REPORT
+echo   [5] ESCI
+echo.
+set "scelta="
+set /p "scelta=Scelta: "
+
+if "%scelta%"=="1" goto AUDIT_PRO
+if "%scelta%"=="2" goto AUDIT_LTSC
+if "%scelta%"=="3" goto COMPARE
+if "%scelta%"=="4" goto REPORTS
+if "%scelta%"=="5" exit /b
+
+echo.
+echo Scelta non valida.
+pause
+goto MENU
+
+:AUDIT_PRO
+cls
+echo ==============================================================
+echo AUDIT SERVIZI - PRO 25H2
+echo ==============================================================
+echo.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0lab\Services-Audit.ps1" -Label "PRO-25H2"
+goto FINE
+
+:AUDIT_LTSC
+cls
+echo ==============================================================
+echo AUDIT SERVIZI - LTSC 2024
+echo ==============================================================
+echo.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0lab\Services-Audit.ps1" -Label "LTSC-2024"
+goto FINE
+
+:COMPARE
+cls
+echo ==============================================================
+echo CONFRONTO ULTIMI AUDIT - LTSC 2024 vs PRO 25H2
+echo ==============================================================
+echo.
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$reports=Join-Path '%~dp0' 'lab\reports';" ^
+  "$l=Get-ChildItem $reports -Filter 'Services-LTSC-2024-*.json' -ErrorAction SilentlyContinue ^| Sort-Object LastWriteTime -Descending ^| Select-Object -First 1;" ^
+  "$p=Get-ChildItem $reports -Filter 'Services-PRO-25H2-*.json' -ErrorAction SilentlyContinue ^| Sort-Object LastWriteTime -Descending ^| Select-Object -First 1;" ^
+  "if(-not $l -or -not $p){Write-Host 'ERRORE: servono almeno un report LTSC e uno PRO in lab\reports.' -ForegroundColor Red; exit 2};" ^
+  "Write-Host ('LTSC: ' + $l.Name); Write-Host ('PRO : ' + $p.Name); Write-Host '';" ^
+  "& '%~dp0lab\Compare-Services.ps1' -ReferencePath $l.FullName -CandidatePath $p.FullName"
+
+goto FINE
+
+:REPORTS
+if not exist "%~dp0lab\reports" mkdir "%~dp0lab\reports"
+start "" "%~dp0lab\reports"
+goto MENU
+
+:FINE
+echo.
+echo ==============================================================
+echo Operazione terminata.
+echo ==============================================================
+pause
+goto MENU
