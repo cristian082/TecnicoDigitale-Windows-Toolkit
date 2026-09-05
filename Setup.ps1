@@ -39,16 +39,11 @@ Write-Host 'Software: nessuna installazione automatica dal preset' -ForegroundCo
 
 try {
     if ($config.Diagnostics.Enabled) { [void](Invoke-TDTDiagnostics -Config $config.Diagnostics -VersionInfo $script:TDTVersionInfo) }
-
     if (-not $WhatIfPreference) { Initialize-TDTBackupSession -Root $Root -Preset $Preset -VersionInfo $script:TDTVersionInfo }
 
-    # I preset descrivono lo stato desiderato. Se usciamo da Gaming, ripristiniamo
-    # soltanto le impostazioni che Gaming aveva preso in gestione e solo se sono
-    # ancora al valore applicato dal Toolkit. Eventuali modifiche successive
-    # dell'utente/tecnico non vengono sovrascritte.
-    if ($Preset -ne 'Gaming') {
-        Restore-TDTGamingOwnership -Root $Root -WhatIf:$WhatIfPreference
-    }
+    if ($Preset -ne 'Gaming') { Restore-TDTGamingOwnership -Root $Root -WhatIf:$WhatIfPreference }
+    if ($Preset -ne 'Business') { Restore-TDTBusinessOwnership -Root $Root -WhatIf:$WhatIfPreference }
+    if ($Preset -eq 'Business' -and -not $WhatIfPreference) { Initialize-TDTBusinessOwnership -Root $Root }
 
     if ($config.Restore.Enabled) { Invoke-TDTRestore -Config $config.Restore -WhatIf:$WhatIfPreference }
     if ($config.Privacy.Enabled) { Invoke-TDTPrivacy -Config $config.Privacy -WhatIf:$WhatIfPreference }
