@@ -1,103 +1,61 @@
 @echo off
-setlocal EnableExtensions EnableDelayedExpansion
+setlocal EnableExtensions
+cd /d "%~dp0"
 
-:: Bootstrap: esegui l'aggiornamento da una copia temporanea.
-if /I not "%~1"=="--worker" (
-    set "WORKER=%TEMP%\TDT-Aggiorna-Toolkit-%RANDOM%-%RANDOM%.cmd"
-    copy /y "%~f0" "!WORKER!" >nul
-    if errorlevel 1 (
-        echo ERRORE: impossibile creare il processo temporaneo di aggiornamento.
-        pause
-        exit /b 1
-    )
-    call "!WORKER!" --worker "%~dp0"
-    set "RC=!ERRORLEVEL!"
-    del /q "!WORKER!" >nul 2>&1
-    if not "!RC!"=="0" (
-        echo.
-        echo L'aggiornamento e terminato con errore !RC!.
-        pause
-    )
-    exit /b !RC!
-)
+set "TDT_UPDATE_PS=%TEMP%\TDT-Update-%RANDOM%-%RANDOM%.ps1"
 
-set "TARGET=%~2"
-if not defined TARGET (
-    echo ERRORE: cartella Toolkit non ricevuta.
-    pause
-    exit /b 1
-)
-:: Rimuove il backslash finale: una destinazione quotata che termina con \ puo
-:: confondere il parsing di robocopy e inglobare le opzioni nel path.
-if "%TARGET:~-1%"=="\" set "TARGET=%TARGET:~0,-1%"
-cd /d "%TARGET%" || (
-    echo ERRORE: impossibile accedere a "%TARGET%"
-    pause
-    exit /b 1
-)
+>"%TDT_UPDATE_PS%" echo $ErrorActionPreference = 'Stop'
+>>"%TDT_UPDATE_PS%" echo $ProgressPreference = 'SilentlyContinue'
+>>"%TDT_UPDATE_PS%" echo $target = [IO.Path]::GetFullPath($args[0]).TrimEnd('\')
+>>"%TDT_UPDATE_PS%" echo $repo = 'https://github.com/cristian082/TecnicoDigitale-Windows-Toolkit/archive/refs/heads/main.zip'
+>>"%TDT_UPDATE_PS%" echo $tmp = Join-Path $env:TEMP ('TDT-Toolkit-Update-' + [guid]::NewGuid().ToString('N'))
+>>"%TDT_UPDATE_PS%" echo $zip = Join-Path $tmp 'Toolkit.zip'
+>>"%TDT_UPDATE_PS%" echo $extract = Join-Path $tmp 'extract'
+>>"%TDT_UPDATE_PS%" echo $source = Join-Path $extract 'TecnicoDigitale-Windows-Toolkit-main'
+>>"%TDT_UPDATE_PS%" echo $log = Join-Path $target 'Aggiornamento-Toolkit.log'
+>>"%TDT_UPDATE_PS%" echo try {
+>>"%TDT_UPDATE_PS%" echo   Write-Host '=============================================================='
+>>"%TDT_UPDATE_PS%" echo   Write-Host '      TECNICO DIGITALE - AGGIORNAMENTO TOOLKIT'
+>>"%TDT_UPDATE_PS%" echo   Write-Host '=============================================================='
+>>"%TDT_UPDATE_PS%" echo   Write-Host ('Cartella Toolkit: ' + $target)
+>>"%TDT_UPDATE_PS%" echo   New-Item -ItemType Directory -Path $tmp,$extract -Force ^| Out-Null
+>>"%TDT_UPDATE_PS%" echo   ('=== Updater ' + (Get-Date) + ' ===') ^| Set-Content -LiteralPath $log
+>>"%TDT_UPDATE_PS%" echo   Write-Host '[1/4] Download ultima versione...'
+>>"%TDT_UPDATE_PS%" echo   Invoke-WebRequest -Uri $repo -OutFile $zip
+>>"%TDT_UPDATE_PS%" echo   Write-Host '[2/4] Estrazione...'
+>>"%TDT_UPDATE_PS%" echo   Expand-Archive -LiteralPath $zip -DestinationPath $extract -Force
+>>"%TDT_UPDATE_PS%" echo   if(-not (Test-Path (Join-Path $source 'VERSION.json'))) { throw 'Archivio GitHub non valido: VERSION.json non trovato.' }
+>>"%TDT_UPDATE_PS%" echo   Write-Host '[3/4] Aggiornamento file...'
+>>"%TDT_UPDATE_PS%" echo   $excluded = @('lab\reports','backups','logs')
+>>"%TDT_UPDATE_PS%" echo   Get-ChildItem -LiteralPath $source -Recurse -File ^| ForEach-Object {
+>>"%TDT_UPDATE_PS%" echo     $rel = $_.FullName.Substring($source.Length).TrimStart('\')
+>>"%TDT_UPDATE_PS%" echo     if($rel -eq 'Aggiornamento-Toolkit.log') { return }
+>>"%TDT_UPDATE_PS%" echo     foreach($x in $excluded) { if($rel -eq $x -or $rel.StartsWith($x + '\',[StringComparison]::OrdinalIgnoreCase)) { return } }
+>>"%TDT_UPDATE_PS%" echo     $dest = Join-Path $target $rel
+>>"%TDT_UPDATE_PS%" echo     $dir = Split-Path -Parent $dest
+>>"%TDT_UPDATE_PS%" echo     if(-not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Path $dir -Force ^| Out-Null }
+>>"%TDT_UPDATE_PS%" echo     Copy-Item -LiteralPath $_.FullName -Destination $dest -Force
+>>"%TDT_UPDATE_PS%" echo     ('COPIATO: ' + $rel) ^| Add-Content -LiteralPath $log
+>>"%TDT_UPDATE_PS%" echo   }
+>>"%TDT_UPDATE_PS%" echo   Write-Host '[4/4] Pulizia file temporanei...'
+>>"%TDT_UPDATE_PS%" echo   Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
+>>"%TDT_UPDATE_PS%" echo   Write-Host ''
+>>"%TDT_UPDATE_PS%" echo   Write-Host 'Aggiornamento completato correttamente.' -ForegroundColor Green
+>>"%TDT_UPDATE_PS%" echo   exit 0
+>>"%TDT_UPDATE_PS%" echo } catch {
+>>"%TDT_UPDATE_PS%" echo   Write-Host ''
+>>"%TDT_UPDATE_PS%" echo   Write-Host ('ERRORE: ' + $_.Exception.Message) -ForegroundColor Red
+>>"%TDT_UPDATE_PS%" echo   try { ('ERRORE: ' + $_.Exception.ToString()) ^| Add-Content -LiteralPath $log } catch {}
+>>"%TDT_UPDATE_PS%" echo   Write-Host ('Log: ' + $log)
+>>"%TDT_UPDATE_PS%" echo   exit 1
+>>"%TDT_UPDATE_PS%" echo }
 
-set "REPO_ZIP=https://github.com/cristian082/TecnicoDigitale-Windows-Toolkit/archive/refs/heads/main.zip"
-set "TMPROOT=%TEMP%\TDT-Toolkit-Update-%RANDOM%-%RANDOM%"
-set "ZIPFILE=%TMPROOT%\Toolkit.zip"
-set "EXTRACT=%TMPROOT%\extract"
-set "SOURCE=%EXTRACT%\TecnicoDigitale-Windows-Toolkit-main"
-set "LOGFILE=%TARGET%\Aggiornamento-Toolkit.log"
-
->"%LOGFILE%" echo === Tecnico Digitale Toolkit Updater - %date% %time% ===
-cls
-echo ==============================================================
-echo       TECNICO DIGITALE - AGGIORNAMENTO TOOLKIT
-echo ==============================================================
-echo.
-echo Cartella Toolkit: %TARGET%
-echo Scarico l'ultima versione da GitHub senza usare Git.
-echo I report, backup e log gia presenti NON vengono cancellati.
-echo.
-
-if exist "%TMPROOT%" rmdir /s /q "%TMPROOT%"
-mkdir "%TMPROOT%" >nul 2>&1 || goto ERRORE
-mkdir "%EXTRACT%" >nul 2>&1 || goto ERRORE
-
-echo [1/4] Download ultima versione...
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; $ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri $env:REPO_ZIP -OutFile $env:ZIPFILE" >>"%LOGFILE%" 2>&1
-if errorlevel 1 (echo ERRORE durante il download.& goto ERRORE)
-
-echo [2/4] Estrazione...
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; Expand-Archive -LiteralPath $env:ZIPFILE -DestinationPath $env:EXTRACT -Force" >>"%LOGFILE%" 2>&1
-if errorlevel 1 (echo ERRORE durante l'estrazione.& goto ERRORE)
-
-if not exist "%SOURCE%\VERSION.json" (
-    echo ERRORE: archivio estratto non valido.
-    goto ERRORE
-)
-
-echo [3/4] Aggiornamento file...
-echo Dettagli copia: "%LOGFILE%"
-robocopy "%SOURCE%" "%TARGET%" /E /R:2 /W:1 /XD "%SOURCE%\lab\reports" "%SOURCE%\backups" "%SOURCE%\logs" /XF "Aggiornamento-Toolkit.log" /NP /TEE /LOG+:"%LOGFILE%"
-set "RC=!ERRORLEVEL!"
-if !RC! GEQ 8 (
-    echo ERRORE ROBOCOPY: codice !RC!.
-    goto ERRORE
-)
-
-echo [4/4] Pulizia file temporanei...
-rmdir /s /q "%TMPROOT%" >nul 2>&1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%TDT_UPDATE_PS%" "%~dp0"
+set "RC=%ERRORLEVEL%"
+del /q "%TDT_UPDATE_PS%" >nul 2>&1
 
 echo.
-echo ==============================================================
-echo Aggiornamento completato correttamente.
-echo ==============================================================
-pause
-exit /b 0
-
-:ERRORE
-echo.
-echo ==============================================================
-echo AGGIORNAMENTO NON RIUSCITO
-echo ==============================================================
-echo Log: "%LOGFILE%"
-echo.
-if exist "%LOGFILE%" type "%LOGFILE%"
-echo.
-pause
-exit /b 1
+if not "%RC%"=="0" echo L'aggiornamento e terminato con errore %RC%.
+echo Premi un tasto per chiudere.
+pause >nul
+exit /b %RC%
