@@ -32,29 +32,116 @@ function Copy-TDTCommandToClipboard {
     catch { Write-Warning "Impossibile copiare negli appunti: $($_.Exception.Message)" }
 }
 
+function Test-TDTReferenceCommandExecutable {
+    param([Parameter(Mandatory)][string]$Id)
+    # Only IDs explicitly handled by Invoke-TDTReferenceCommandControlled may run.
+    # The text stored in JSON is never evaluated as PowerShell code.
+    return $Id -in @(
+        'WIN-001','WIN-002','WIN-003','WIN-004','WIN-005',
+        'NET-001','NET-002','NET-003','NET-004','NET-005','NET-006','NET-007','NET-008','NET-009','NET-010','NET-011','NET-012',
+        'PRN-001','PRN-002','PRN-003',
+        'DSK-001','DSK-002','DSK-003',
+        'DRV-001','DRV-002','DRV-003',
+        'USR-001','USR-002','SVC-001',
+        'WU-001','WU-002','BOOT-001','BOOT-002',
+        'SHR-001','SHR-002','SHR-003',
+        'PWR-001','PWR-002','APP-001'
+    )
+}
+
+function Invoke-TDTReferenceCommandControlled {
+    param([Parameter(Mandatory)][string]$Id)
+
+    switch ($Id) {
+        'WIN-001' { & dism.exe /Online /Cleanup-Image /CheckHealth }
+        'WIN-002' { & dism.exe /Online /Cleanup-Image /ScanHealth }
+        'WIN-003' { & dism.exe /Online /Cleanup-Image /RestoreHealth }
+        'WIN-004' { & sfc.exe /scannow }
+        'WIN-005' { Start-Process winver.exe }
+
+        'NET-001' { & ipconfig.exe /all }
+        'NET-002' { & ipconfig.exe /flushdns }
+        'NET-003' { & ipconfig.exe /release }
+        'NET-004' { & ipconfig.exe /renew }
+        'NET-005' { & netsh.exe winsock reset }
+        'NET-006' { & netsh.exe int ip reset }
+        'NET-007' { & arp.exe -a }
+        'NET-008' { & route.exe print }
+        'NET-009' { & netstat.exe -ano }
+        'NET-010' { & tracert.exe 1.1.1.1 }
+        'NET-011' { & netsh.exe winhttp show proxy }
+        'NET-012' { & netsh.exe wlan show profiles }
+
+        'PRN-001' { Start-Process control.exe -ArgumentList 'printers' }
+        'PRN-002' { Start-Process printmanagement.msc }
+        'PRN-003' { & sc.exe query spooler }
+
+        'DSK-001' { & chkdsk.exe C: /scan }
+        'DSK-002' { Start-Process diskmgmt.msc }
+        'DSK-003' { Get-Disk | Format-Table Number,FriendlyName,BusType,HealthStatus,OperationalStatus,PartitionStyle,Size -AutoSize | Out-Host }
+
+        'DRV-001' { Start-Process devmgmt.msc }
+        'DRV-002' { Get-PnpDevice | Where-Object Status -ne 'OK' | Format-Table Status,Class,FriendlyName,InstanceId -AutoSize | Out-Host }
+        'DRV-003' { & pnputil.exe /scan-devices }
+
+        'USR-001' { & net.exe user }
+        'USR-002' { Start-Process lusrmgr.msc }
+        'SVC-001' { Start-Process services.msc }
+
+        'WU-001' { Start-Process 'ms-settings:windowsupdate' }
+        'WU-002' { Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 20 | Format-Table -AutoSize | Out-Host }
+        'BOOT-001' { & bcdedit.exe /enum }
+        'BOOT-002' { Start-Process msconfig.exe }
+
+        'SHR-001' { & net.exe share }
+        'SHR-002' { & net.exe use }
+        'SHR-003' { Start-Process mstsc.exe }
+
+        'PWR-001' { & powercfg.exe /batteryreport }
+        'PWR-002' { & powercfg.exe /a }
+        'APP-001' { & winget.exe list }
+
+        default { throw "Il comando $Id non e abilitato per l'esecuzione diretta. Usa Copia comando." }
+    }
+}
+
 function Invoke-TDTReferenceCommand {
     param([Parameter(Mandatory)]$Item)
+
     if ($Item.Command -match '<[^>]+>') {
         Write-Warning 'Il comando contiene un segnaposto. Copialo e sostituisci il valore prima di eseguirlo.'
+        return
+    }
+    if (-not (Test-TDTReferenceCommandExecutable -Id $Item.Id)) {
+        Write-Warning 'Questo comando e disponibile come riferimento/copia ma non e abilitato per l esecuzione diretta.'
         return
     }
     if ($Item.Impact -ne 'BASSO') {
         Write-Warning ("Impatto dichiarato: {0}. {1}" -f $Item.Impact,$Item.NotFor)
     }
-    if ($Item.Reboot) { Write-Warning 'Questa operazione puo richiedere un riavvio per avere effetto.' }
+    if ($Item.Reboot) {
+        Write-Warning 'Questa operazione puo richiedere un riavvio per avere effetto.'
+    }
+
     $confirm = Read-Host ("Eseguire adesso '{0}'? [S/N]" -f $Item.Command)
     if ($confirm -notmatch '^[SsYy]') { return }
+
     Write-Host "`n--- OUTPUT COMANDO ---" -ForegroundColor Cyan
-    try { Invoke-Expression $Item.Command }
+    try { Invoke-TDTReferenceCommandControlled -Id $Item.Id }
     catch { Write-Warning $_.Exception.Message }
-    Write-Host "--- FINE OUTPUT ---" -ForegroundColor Cyan
+    Write-Host '--- FINE OUTPUT ---' -ForegroundColor Cyan
 }
 
 function Show-TDTCommandItemMenu {
     param([Parameter(Mandatory)]$Item)
     do {
         Show-TDTCommandCard -Item $Item
-        Write-Host "`n [E] Esegui"
+        if (Test-TDTReferenceCommandExecutable -Id $Item.Id) {
+            Write-Host "`n [E] Esegui (dispatcher controllato)"
+        }
+        else {
+            Write-Host "`n [E] Esecuzione diretta non disponibile" -ForegroundColor DarkGray
+        }
         Write-Host ' [C] Copia comando'
         Write-Host ' [0] Indietro'
         $choice = Read-Host 'Scelta'
@@ -69,7 +156,11 @@ function Show-TDTCommandItemMenu {
 
 function Select-TDTCommandFromList {
     param([Parameter(Mandatory)][array]$Items,[Parameter(Mandatory)][string]$Title)
-    if (-not $Items -or $Items.Count -eq 0) { Write-Warning 'Nessun comando trovato.'; [void](Read-Host 'INVIO per continuare'); return }
+    if (-not $Items -or $Items.Count -eq 0) {
+        Write-Warning 'Nessun comando trovato.'
+        [void](Read-Host 'INVIO per continuare')
+        return
+    }
     do {
         Clear-Host
         Write-Host "`n$Title" -ForegroundColor Cyan
@@ -83,7 +174,8 @@ function Select-TDTCommandFromList {
         $n = 0
         if ([int]::TryParse($raw,[ref]$n) -and $n -ge 1 -and $n -le $Items.Count) {
             Show-TDTCommandItemMenu -Item $Items[$n-1]
-        } else { Write-Warning 'Scelta non valida.'; Start-Sleep -Milliseconds 600 }
+        }
+        else { Write-Warning 'Scelta non valida.'; Start-Sleep -Milliseconds 600 }
     } while ($true)
 }
 
@@ -95,7 +187,9 @@ function Search-TDTCommandCatalog {
     $matches = @($Catalog | Where-Object {
         $haystack = ("{0} {1} {2} {3} {4} {5}" -f $_.Id,$_.Category,$_.Title,$_.Purpose,$_.NotFor,$_.Keywords).ToLowerInvariant()
         $ok = $true
-        foreach ($token in $tokens) { if ($haystack.IndexOf($token) -lt 0) { $ok = $false; break } }
+        foreach ($token in $tokens) {
+            if ($haystack.IndexOf($token) -lt 0) { $ok = $false; break }
+        }
         $ok
     })
     Select-TDTCommandFromList -Items $matches -Title ("RISULTATI: {0}" -f $query)
@@ -111,17 +205,24 @@ function Show-TDTCommandReference {
         Write-Host ' TECNICO DIGITALE - COMANDI DEL TECNICO' -ForegroundColor Cyan
         Write-Host '========================================================'
         Write-Host (" Catalogo offline: {0} comandi" -f $catalog.Count) -ForegroundColor DarkGray
-        for ($i=0; $i -lt $categories.Count; $i++) { Write-Host (" [{0}] {1}" -f ($i+1),$categories[$i]) }
+        Write-Host ' Esecuzione: solo dispatcher controllato; nessun Invoke-Expression.' -ForegroundColor DarkGray
+        for ($i=0; $i -lt $categories.Count; $i++) {
+            Write-Host (" [{0}] {1}" -f ($i+1),$categories[$i])
+        }
         Write-Host "`n [C] Cerca comando / problema" -ForegroundColor Yellow
         Write-Host ' [0] Torna agli Strumenti Tecnico'
         $choice = Read-Host 'Scelta'
         if ($choice -eq '0') { return }
-        if ($choice -match '^[Cc]$') { Search-TDTCommandCatalog -Catalog $catalog; continue }
+        if ($choice -match '^[Cc]$') {
+            Search-TDTCommandCatalog -Catalog $catalog
+            continue
+        }
         $n = 0
         if ([int]::TryParse($choice,[ref]$n) -and $n -ge 1 -and $n -le $categories.Count) {
             $category = $categories[$n-1]
             $items = @($catalog | Where-Object Category -eq $category)
             Select-TDTCommandFromList -Items $items -Title $category
-        } else { Write-Warning 'Scelta non valida.'; Start-Sleep -Milliseconds 600 }
+        }
+        else { Write-Warning 'Scelta non valida.'; Start-Sleep -Milliseconds 600 }
     } while ($true)
 }
