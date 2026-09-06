@@ -128,9 +128,9 @@ Build 10 e la versione corrente.
 
 Correzioni effettuate:
 1. `modules/TechnicianTools.ps1` e stato riportato ESATTAMENTE al blob completo del Build 8 (`ea359ecfabc79e1d743dfd7f92d2019de0e5661c`), recuperando tutte le funzioni/dettagli persi.
-2. Creato `modules/TechnicianToolsMenu.ps1`: e un integration layer che sovrascrive soltanto `Show-TDTTechnicianTools` e aggiunge la voce 13, senza riscrivere le funzioni operative Build 8.
+2. Creato `modules/TechnicianToolsMenu.ps1`: integration layer che sovrascrive soltanto `Show-TDTTechnicianTools` e aggiunge la voce 13, senza riscrivere le funzioni operative Build 8.
 3. `Strumenti-Tecnico.ps1` carica nell'ordine: TechnicianTools → CommandReference → TechnicianToolsMenu.
-4. `Invoke-Expression` e stato eliminato da `CommandReference.ps1`.
+4. `Invoke-Expression` eliminato da `CommandReference.ps1`.
 5. L'esecuzione del catalogo usa `Invoke-TDTReferenceCommandControlled`: dispatcher con `switch` e allowlist di ID. Il testo `Command` proveniente dal JSON non viene mai valutato come codice.
 6. Comandi non allowlistati restano consultabili/copiabili ma non eseguibili direttamente.
 7. Segnaposto come `<PID>` bloccano l'esecuzione diretta.
@@ -146,38 +146,50 @@ Commit Build 10:
 - `1d13bafe2144da9a2a7cb572354681fc6d4edc9f` — v0.1.10 Build 10.
 - `243331758974c8fb164ae34e0b38e479eea496ab` — documentazione Build 10.
 
-Gap ancora aperto negli Strumenti Tecnico: il restart manuale di un servizio del Build 8 usa ancora `Restart-Service -Force`; rivalutarlo in futuro, ma non e stato modificato nel Build 10 per evitare di introdurre cambi non necessari prima dello smoke test.
+Gap ancora aperto negli Strumenti Tecnico: il restart manuale di un servizio del Build 8 usa ancora `Restart-Service -Force`; rivalutarlo in futuro, ma non e stato modificato nel Build 10 per evitare cambi non necessari prima del test reale.
 
-## Stato attuale dei test
-L'updater funziona bene.
+## Stato attuale dei test — Build 10 VM PASS
+Il 06/09/2026 Build 10 e stata aggiornata ed eseguita nella VM. Smoke test mirato: PASS.
 
-Build 10 e stata corretta a livello repository ma NON e ancora stata eseguita nella VM dopo queste modifiche. Non dichiararla certificata finche non viene fatto lo smoke test.
+Verificato realmente:
+- `Strumenti-Tecnico.ps1` si apre senza errori visibili;
+- menu principale completo con voci 1-12 Build 8 + voce 13 `Comandi del tecnico - catalogo offline`;
+- formattazione corretta, nessun newline letterale visibile;
+- voce 13 carica correttamente il catalogo: 49 comandi, 16 categorie;
+- UI dichiara `Esecuzione: solo dispatcher controllato; nessun Invoke-Expression`;
+- navigazione del catalogo funzionante;
+- `NET-001 - Configurazione IP completa` (`ipconfig /all`) viene eseguito correttamente dal dispatcher solo dopo conferma esplicita;
+- `SVC-002 - Processo da PID`, contenente `<PID>`, mostra `Esecuzione diretta non disponibile`: il comando parametrico non puo essere lanciato accidentalmente e resta copiabile;
+- nessun errore PowerShell osservato durante questo smoke test.
 
-Smoke test immediato Build 10:
-1. aggiornare la VM tramite updater e confermare `v0.1.10 Build 10`;
-2. aprire `Strumenti-Tecnico.ps1` e verificare voci 1-13;
-3. aprire tutti i sottomenu Build 8;
-4. controllare pending reboot, SMART/reliability, stampanti/porte, startup + task Logon e triage processi;
-5. aprire voce 13, navigare categorie e cercare `stampante`, `wifi`, `boot`, `disco`;
-6. copiare un comando;
-7. eseguire `NET-001 ipconfig /all`;
-8. verificare che `SVC-002` con `<PID>` non parta direttamente;
-9. annullare un comando MEDIO/ALTO;
-10. nessun riavvio automatico e nessuna modifica a Defender/Firewall/UAC/Update policy.
+Questo PASS certifica l'integrazione critica Build 10 verificata sopra; non implica che ogni singola funzione dei 49 comandi o ogni ramo degli Strumenti Tecnico sia stato eseguito in VM.
 
-## Primo test sul PC personale
-Dopo lo smoke test VM del Build 10, resta da provare il Toolkit sul PC personale del proprietario prima di passare a PC cliente.
+L'updater continua a funzionare correttamente.
 
-Profilo consigliato per il primo test reale: STANDARD, perche e la base piu rappresentativa dei PC cliente. Procedura: diagnostica/baseline prima → punto di ripristino → Standard → riavvio → diagnostica/baseline dopo. Poi, se tutto e corretto, testare `Standard → Business → Standard` per validare anche la reversibilita su hardware reale.
+## Primo test sul PC personale — PROSSIMO PASSO
+Il prossimo test e sul PC personale del proprietario, prima di usare il Toolkit su PC cliente.
+
+Profilo consigliato per il primo test reale: STANDARD, perche e la base piu rappresentativa dei PC cliente.
+
+Procedura consigliata:
+1. aggiornare/verificare Toolkit `v0.1.10 Build 10` sul PC personale;
+2. eseguire diagnostica/baseline PRIMA;
+3. creare/verificare il punto di ripristino;
+4. applicare STANDARD;
+5. riavviare;
+6. eseguire diagnostica/baseline DOPO e confrontare;
+7. verificare manualmente Start/taskbar, rete, audio, Bluetooth, stampanti, Windows Update, Defender/Firewall, Edge/WebView2 e software principali;
+8. se tutto e corretto, testare `Standard → Business → Standard`;
+9. dopo il ritorno a Standard, verificare `TaskbarAl` anche dopo riavvio/login per chiudere definitivamente il vecchio bug Active Setup.
 
 Gaming va usato come test reale solo se il PC viene effettivamente usato anche per gaming.
 
 ## Prossimo lavoro nella nuova chat
-NON ricreare Build 10: e gia nella repo.
+NON ricreare Build 10: e gia nella repo e lo smoke test VM e PASS.
 
 Partire cosi:
 1. leggere questo file e `VERSION.json` live;
-2. aggiornare la VM tramite updater a v0.1.10 Build 10;
-3. eseguire lo smoke test sopra e correggere solo eventuali errori realmente osservati;
-4. se PASS, procedere al test Standard sul PC personale con baseline prima/dopo;
-5. successivamente provare Standard → Business → Standard e verificare TaskbarAl anche dopo riavvio/login.
+2. preparare il test sul PC personale senza modificare codice se non emerge un problema reale;
+3. partire dal profilo STANDARD con baseline prima/dopo;
+4. se PASS, provare `Standard → Business → Standard` e verificare reversibilita dopo riavvio/login;
+5. documentare i risultati reali nella repo prima di considerare il Toolkit pronto per PC cliente.
