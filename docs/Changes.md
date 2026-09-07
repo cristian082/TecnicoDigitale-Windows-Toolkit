@@ -40,6 +40,7 @@ Questo documento descrive cosa modifica il toolkit e con quale ambito.
 
 ## Software
 - Installa software mediante `winget` usando ID espliciti.
+- Microsoft PowerToys è disponibile come scelta individuale tramite l'ID ufficiale `Microsoft.PowerToys` e non è incluso automaticamente nei pacchetti rapidi.
 - Google Chrome dispone di fallback sull'installer ufficiale se l'installazione winget fallisce.
 - Non usa driver updater di terze parti.
 - Ambito: macchina/installer, secondo il pacchetto.

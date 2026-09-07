@@ -24,7 +24,8 @@ $catalog = @(
     [pscustomobject]@{ Key='7'; Name='Adobe Acrobat Reader';Id='Adobe.Acrobat.Reader.64-bit';      Selected=$false },
     [pscustomobject]@{ Key='8'; Name='SumatraPDF';          Id='SumatraPDF.SumatraPDF';            Selected=$false },
     [pscustomobject]@{ Key='9'; Name='Steam';               Id='Valve.Steam';                      Selected=$false },
-    [pscustomobject]@{ Key='10';Name='Playnite';            Id='Playnite.Playnite';                Selected=$false }
+    [pscustomobject]@{ Key='10';Name='Playnite';            Id='Playnite.Playnite';                Selected=$false },
+    [pscustomobject]@{ Key='11';Name='Microsoft PowerToys'; Id='Microsoft.PowerToys';              Selected=$false }
 )
 
 function Set-TDTSelection {

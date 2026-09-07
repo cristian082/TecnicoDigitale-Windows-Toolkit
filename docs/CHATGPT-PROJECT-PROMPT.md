@@ -19,7 +19,7 @@ Il Toolkit deve essere sicuro anche su PC sconosciuti. Non deve disabilitare Def
 - Non riscrivere un modulo funzionante quando basta una modifica minima/integration layer.
 
 ## Versione corrente
-`v0.1.11 - Build 11 [development]`.
+`v0.1.12 - Build 12 [development]`.
 
 L'updater e operativo ed e stato usato con successo per aggiornare le build in VM. Il proprietario riferisce che l'aggiornamento funziona benissimo. Non modificare l'updater senza una ragione concreta e un test mirato.
 
@@ -88,7 +88,7 @@ Gap noti:
 - UX selezione sessione migliorabile.
 
 ## Software
-I preset non installano software. `Installa-Software.ps1` e separato. Software selezionabili: Chrome, Firefox, VLC, WinRAR, 7-Zip, Everything, Adobe Reader, SumatraPDF, Steam, Playnite.
+I preset non installano software. `Installa-Software.ps1` e separato. Software selezionabili: Chrome, Firefox, VLC, WinRAR, 7-Zip, Everything, Adobe Reader, SumatraPDF, Steam, Playnite, Microsoft PowerToys.
 
 ## Standard baseline
 Primo test pulito Standard sulla VM:
@@ -200,21 +200,30 @@ Decisione Build 11:
 - documentazione aggiornata;
 - versione incrementata a `v0.1.11 Build 11`.
 
+Retest mirato Build 11 sul PC personale: PASS. STANDARD e terminato senza l'avviso `AllowNewsAndInterests` e ha conservato lo stato Widget scelto manualmente dall'utente.
+
+## Build 12 — Microsoft PowerToys nel catalogo software
+- aggiunto `Microsoft PowerToys` come voce 11 del menu `INSTALLA SOFTWARE`;
+- ID winget ufficiale: `Microsoft.PowerToys`;
+- resta una scelta individuale e non entra nei pacchetti rapidi PC NUOVO o GAMING;
+- nessun preset installa PowerToys automaticamente;
+- versione incrementata a `v0.1.12 Build 12`.
+
 ## Prossimo test sul PC personale
-1. aggiornare il Toolkit a `v0.1.11 Build 11`;
-2. eseguire STANDARD come retest mirato e verificare che non compaia piu l'avviso `AllowNewsAndInterests`;
-3. verificare che lo stato Widget scelto manualmente resti invariato;
-4. se PASS, testare `Standard → Business → Standard`;
+1. aggiornare il Toolkit a `v0.1.12 Build 12`;
+2. aprire `INSTALLA SOFTWARE` e verificare che PowerToys appaia come voce 11, inizialmente non selezionata;
+3. testare volontariamente installazione o aggiornamento PowerToys e verificarne l'esito;
+4. testare `Standard → Business → Standard`;
 5. dopo il ritorno a Standard, verificare `TaskbarAl` anche dopo riavvio/login per chiudere definitivamente il vecchio bug Active Setup.
 
 Gaming va usato come test reale solo se il PC viene effettivamente usato anche per gaming.
 
 ## Prossimo lavoro nella nuova chat
-NON ricreare Build 11: contiene la correzione minima derivata dal primo test reale.
+NON ricreare Build 12: contiene la correzione Widget verificata e PowerToys nel catalogo software.
 
 Partire cosi:
 1. leggere questo file e `VERSION.json` live;
-2. aggiornare il PC personale a Build 11;
-3. eseguire il retest mirato STANDARD descritto sopra;
-4. se PASS, provare `Standard → Business → Standard` e verificare reversibilita dopo riavvio/login;
+2. aggiornare il PC personale a Build 12;
+3. verificare la voce PowerToys ed eventualmente provarne l'installazione;
+4. provare `Standard → Business → Standard` e verificare reversibilita dopo riavvio/login;
 5. documentare i risultati prima di considerare il Toolkit pronto per PC cliente.

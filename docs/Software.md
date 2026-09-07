@@ -29,11 +29,14 @@ Catalogo iniziale:
 - SumatraPDF
 - Steam
 - Playnite
+- Microsoft PowerToys
 
 Selezioni rapide iniziali:
 
 - `PC NUOVO`: Chrome, VLC, WinRAR, Everything, Acrobat Reader;
 - `GAMING`: Chrome, VLC, 7-Zip, Steam, Playnite.
+
+PowerToys resta selezionabile singolarmente e non viene incluso nei pacchetti rapidi: offre strumenti utili, ma non è necessario su ogni PC e può aggiungere processi in background.
 
 Prima dell'installazione viene mostrato l'elenco selezionato e richiesta conferma.
 
