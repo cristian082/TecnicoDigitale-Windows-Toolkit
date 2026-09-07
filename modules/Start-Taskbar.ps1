@@ -41,12 +41,6 @@ function Invoke-TDTStartTaskbar {
         }
     }
 
-    # Widgets: use the documented machine policy instead of the protected per-user TaskbarDa value.
-    if ($Config.HideWidgets -and $PSCmdlet.ShouldProcess('HKLM:\SOFTWARE\Policies\Microsoft\Dsh', 'Disabilitare Widgets per il dispositivo')) {
-        $widgetsPolicy = 'HKLM:\SOFTWARE\Policies\Microsoft\Dsh'
-        [void](Set-TDTRegistryDword -Path $widgetsPolicy -Name 'AllowNewsAndInterests' -Value 0)
-    }
-
     if ($Config.LeftAlignTaskbar -and $PSCmdlet.ShouldProcess('Taskbar', 'Allineare Start a sinistra')) {
         # Impostazione specifica Business: niente Active Setup globale, altrimenti puo
         # sopravvivere alla transizione di profilo e riapplicarsi ai login successivi.

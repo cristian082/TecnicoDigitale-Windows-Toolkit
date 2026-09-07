@@ -2,19 +2,19 @@
 
 Documentazione di `modules/Start-Taskbar.ps1`.
 
-## TASKBAR-001 — Nascondi Widget
+## TASKBAR-001 — Widget lasciati invariati
 
 **Che cos'è:** i Widget di Windows 11 mostrano notizie, meteo e altri contenuti nella relativa esperienza della barra.
 
-**Cosa fa il Toolkit:** usa la policy di sistema prevista dal modulo per disabilitare l'esperienza Widget sul dispositivo.
+**Cosa fa il Toolkit:** non modifica lo stato dei Widget e conserva la preferenza scelta dall'utente nelle Impostazioni di Windows.
 
-**Perché:** rende la barra più essenziale sui preset che non richiedono i Widget.
+**Perché:** nascondere l'icona e soprattutto una preferenza estetica, non una ottimizzazione prestazionale dimostrata. Inoltre il test reale su Windows 11 Pro build `26200.9278` ha verificato che Windows rifiuta la scrittura diretta sia della policy macchina `AllowNewsAndInterests` sia del valore utente `TaskbarDa`, mentre permette il cambio dall'interfaccia ufficiale.
 
-**Cosa non fa:** non disabilita Internet o Windows Search.
+**Cosa non fa:** non forza permessi del Registro, non rimuove Windows Web Experience Pack e non disabilita componenti WebView2.
 
-**Rischio:** basso; i Widget non saranno disponibili finché la policy rimane applicata.
+**Rischio:** nessuno; la configurazione esistente resta invariata.
 
-**Dettaglio tecnico:** `HKLM\SOFTWARE\Policies\Microsoft\Dsh`, `AllowNewsAndInterests=0`.
+**Dettaglio tecnico:** nessuna chiave Widget viene scritta. La gestione resta disponibile in `Impostazioni > Personalizzazione > Barra delle applicazioni`.
 
 ## TASKBAR-002 — Allinea Start a sinistra
 

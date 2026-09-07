@@ -18,7 +18,7 @@ Consulta l'[indice della documentazione](docs/README.md).
 | Restore/Backup | Protegge lo stato precedente | Sì |
 | Explorer | Opzioni pratiche di Esplora file | Sì |
 | Privacy | Riduce suggerimenti/promozioni selezionati | Sì |
-| Start/Taskbar | Widget, ricerca e barra applicazioni | Sì |
+| Start/Taskbar | Ricerca e barra applicazioni | Sì |
 | Gaming | Opzioni gaming conservative | Sì |
 | Debloat | Solo pacchetti esplicitamente previsti | Sì |
 | Software | Programmi scelti manualmente, separati dai preset | Sì |

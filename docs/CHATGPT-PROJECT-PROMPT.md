@@ -19,7 +19,7 @@ Il Toolkit deve essere sicuro anche su PC sconosciuti. Non deve disabilitare Def
 - Non riscrivere un modulo funzionante quando basta una modifica minima/integration layer.
 
 ## Versione corrente
-`v0.1.10 - Build 10 [development]`.
+`v0.1.11 - Build 11 [development]`.
 
 L'updater e operativo ed e stato usato con successo per aggiornare le build in VM. Il proprietario riferisce che l'aggiornamento funziona benissimo. Non modificare l'updater senza una ragione concreta e un test mirato.
 
@@ -166,30 +166,55 @@ Questo PASS certifica l'integrazione critica Build 10 verificata sopra; non impl
 
 L'updater continua a funzionare correttamente.
 
-## Primo test sul PC personale — PROSSIMO PASSO
-Il prossimo test e sul PC personale del proprietario, prima di usare il Toolkit su PC cliente.
+## Build 11 — Widget lasciati invariati dopo test reale
+Il 07/09/2026 e stato completato il primo test reale STANDARD su Windows 11 Pro build `26200.9278`, PC personale con 32 GB RAM.
 
-Profilo consigliato per il primo test reale: STANDARD, perche e la base piu rappresentativa dei PC cliente.
+Baseline PRIMA → DOPO il riavvio:
+- processi: 161 → 150;
+- RAM fisica usata: 3873 → 3424 MB;
+- startup: 9 → 9;
+- servizi running: 109 → 103;
+- AppX provisioned: 55 → 55;
+- nessun programma, AppX, feature, capability, task pianificato o StartMode servizio modificato in modo strutturale.
 
-Procedura consigliata:
-1. aggiornare/verificare Toolkit `v0.1.10 Build 10` sul PC personale;
-2. eseguire diagnostica/baseline PRIMA;
-3. creare/verificare il punto di ripristino;
-4. applicare STANDARD;
-5. riavviare;
-6. eseguire diagnostica/baseline DOPO e confrontare;
-7. verificare manualmente Start/taskbar, rete, audio, Bluetooth, stampanti, Windows Update, Defender/Firewall, Edge/WebView2 e software principali;
-8. se tutto e corretto, testare `Standard → Business → Standard`;
-9. dopo il ritorno a Standard, verificare `TaskbarAl` anche dopo riavvio/login per chiudere definitivamente il vecchio bug Active Setup.
+Le differenze di RAM, processi e servizi erano variazioni runtime dopo il riavvio e non devono essere presentate come guadagni certi del Toolkit.
+
+Verifiche manuali PASS:
+- Start centrato;
+- icone desktop Standard corrette;
+- Esplora file su Questo PC ed estensioni visibili;
+- `Termina attivita` presente sulla taskbar;
+- rete, audio, stampanti configurate, Windows Update, Defender, Firewall, Edge, WebView2 e software principali funzionanti;
+- Bluetooth non applicabile per assenza hardware.
+
+Problema reale trovato:
+- `AllowNewsAndInterests=0` su `HKLM\SOFTWARE\Policies\Microsoft\Dsh` ha restituito accesso negato e il Widget e rimasto visibile;
+- anche `TaskbarDa=0` su `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced` ha restituito accesso negato sia da prompt elevato sia non elevato;
+- l'interfaccia ufficiale di Windows ha invece disattivato il Widget e creato `TaskbarDa=0`;
+- nascondere il Widget e una preferenza estetica senza beneficio prestazionale dimostrato, quindi non giustifica forzature di ACL, TrustedInstaller, rimozioni AppX o un Undo incompleto.
+
+Decisione Build 11:
+- rimosso `HideWidgets` dai preset Standard, Gaming e Business;
+- rimosso dal modulo Start/Taskbar il tentativo di scrittura della policy macchina;
+- i Widget restano nello stato scelto dall'utente;
+- documentazione aggiornata;
+- versione incrementata a `v0.1.11 Build 11`.
+
+## Prossimo test sul PC personale
+1. aggiornare il Toolkit a `v0.1.11 Build 11`;
+2. eseguire STANDARD come retest mirato e verificare che non compaia piu l'avviso `AllowNewsAndInterests`;
+3. verificare che lo stato Widget scelto manualmente resti invariato;
+4. se PASS, testare `Standard → Business → Standard`;
+5. dopo il ritorno a Standard, verificare `TaskbarAl` anche dopo riavvio/login per chiudere definitivamente il vecchio bug Active Setup.
 
 Gaming va usato come test reale solo se il PC viene effettivamente usato anche per gaming.
 
 ## Prossimo lavoro nella nuova chat
-NON ricreare Build 10: e gia nella repo e lo smoke test VM e PASS.
+NON ricreare Build 11: contiene la correzione minima derivata dal primo test reale.
 
 Partire cosi:
 1. leggere questo file e `VERSION.json` live;
-2. preparare il test sul PC personale senza modificare codice se non emerge un problema reale;
-3. partire dal profilo STANDARD con baseline prima/dopo;
+2. aggiornare il PC personale a Build 11;
+3. eseguire il retest mirato STANDARD descritto sopra;
 4. se PASS, provare `Standard → Business → Standard` e verificare reversibilita dopo riavvio/login;
-5. documentare i risultati reali nella repo prima di considerare il Toolkit pronto per PC cliente.
+5. documentare i risultati prima di considerare il Toolkit pronto per PC cliente.

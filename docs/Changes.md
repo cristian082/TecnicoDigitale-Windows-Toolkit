@@ -20,12 +20,12 @@ Questo documento descrive cosa modifica il toolkit e con quale ambito.
 - Ambito: utente.
 
 ## Start e Taskbar
-- Può nascondere Widgets tramite policy macchina.
+- Lascia invariata la preferenza Widget dell'utente.
 - Può allineare Start a sinistra.
 - Disabilita evidenziazioni dinamiche della ricerca.
 - Può disabilitare i suggerimenti web nella casella di ricerca senza disattivare Windows Search o l'indicizzazione.
 - Può abilitare `Termina attività` nel menu contestuale delle app sulla barra delle applicazioni.
-- Ambito: macchina per Widgets, utente per le altre impostazioni.
+- Ambito: utente.
 
 ## Debloat
 - Rimuove solo i pacchetti Appx esplicitamente elencati nel preset.
