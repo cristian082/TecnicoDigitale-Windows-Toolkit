@@ -19,7 +19,7 @@ Il Toolkit deve essere sicuro anche su PC sconosciuti. Non deve disabilitare Def
 - Non riscrivere un modulo funzionante quando basta una modifica minima/integration layer.
 
 ## Versione corrente
-`v0.1.12 - Build 12 [development]`.
+`v0.1.13 - Build 13 [development]`.
 
 L'updater e operativo ed e stato usato con successo per aggiornare le build in VM. Il proprietario riferisce che l'aggiornamento funziona benissimo. Non modificare l'updater senza una ragione concreta e un test mirato.
 
@@ -209,21 +209,35 @@ Retest mirato Build 11 sul PC personale: PASS. STANDARD e terminato senza l'avvi
 - nessun preset installa PowerToys automaticamente;
 - versione incrementata a `v0.1.12 Build 12`.
 
+## Build 13 — gestione manuale ibernazione e hiberfil.sys
+- aggiunto `modules/HibernationTools.ps1` come strumento separato dai preset;
+- nuova voce 14 negli Strumenti Tecnico;
+- stato read-only con presenza/dimensione di `hiberfil.sys`, spazio libero e `powercfg /a`;
+- disattivazione con `powercfg /hibernate off` soltanto dopo conferma testuale `DISATTIVA`;
+- riattivazione con `powercfg /hibernate on` soltanto dopo conferma testuale `ATTIVA`;
+- avvisi espliciti per Ibernazione, Sospensione ibrida, Avvio rapido e consumo disco;
+- verifica della presenza/assenza di `hiberfil.sys` dopo la modifica;
+- nessun preset esegue queste azioni, nessun riavvio automatico e nessuna integrazione ingannevole con l'Undo per-sessione;
+- versione incrementata a `v0.1.13 Build 13`.
+
 ## Prossimo test sul PC personale
-1. aggiornare il Toolkit a `v0.1.12 Build 12`;
-2. aprire `INSTALLA SOFTWARE` e verificare che PowerToys appaia come voce 11, inizialmente non selezionata;
-3. testare volontariamente installazione o aggiornamento PowerToys e verificarne l'esito;
-4. testare `Standard → Business → Standard`;
-5. dopo il ritorno a Standard, verificare `TaskbarAl` anche dopo riavvio/login per chiudere definitivamente il vecchio bug Active Setup.
+1. aggiornare il Toolkit a `v0.1.13 Build 13`;
+2. aprire Strumenti Tecnico e verificare la nuova voce 14 e lo stato iniziale senza applicare modifiche;
+3. provare la disattivazione con conferma `DISATTIVA`, verificare `powercfg /a` e lo spazio recuperato;
+4. provare la riattivazione con conferma `ATTIVA`, quindi lasciare il PC nello stato desiderato;
+5. aprire `INSTALLA SOFTWARE` e verificare che PowerToys appaia come voce 11, inizialmente non selezionata;
+6. testare volontariamente installazione o aggiornamento PowerToys e verificarne l'esito;
+7. testare `Standard → Business → Standard`;
+8. dopo il ritorno a Standard, verificare `TaskbarAl` anche dopo riavvio/login per chiudere definitivamente il vecchio bug Active Setup.
 
 Gaming va usato come test reale solo se il PC viene effettivamente usato anche per gaming.
 
 ## Prossimo lavoro nella nuova chat
-NON ricreare Build 12: contiene la correzione Widget verificata e PowerToys nel catalogo software.
+NON ricreare Build 13: contiene la correzione Widget verificata, PowerToys nel catalogo software e la gestione manuale dell'ibernazione.
 
 Partire cosi:
 1. leggere questo file e `VERSION.json` live;
-2. aggiornare il PC personale a Build 12;
+2. aggiornare il PC personale a Build 13;
 3. verificare la voce PowerToys ed eventualmente provarne l'installazione;
 4. provare `Standard → Business → Standard` e verificare reversibilita dopo riavvio/login;
 5. documentare i risultati prima di considerare il Toolkit pronto per PC cliente.

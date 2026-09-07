@@ -45,6 +45,14 @@ Questo documento descrive cosa modifica il toolkit e con quale ambito.
 - Non usa driver updater di terze parti.
 - Ambito: macchina/installer, secondo il pacchetto.
 
+## Ibernazione e hiberfil.sys
+- Strumento manuale separato disponibile negli Strumenti Tecnico; non viene eseguito dai preset.
+- Mostra stato, dimensione di `hiberfil.sys`, spazio libero e stati di sospensione supportati.
+- Puo disattivare l'ibernazione con `powercfg /hibernate off`, liberando lo spazio del file ma disabilitando anche Sospensione ibrida e Avvio rapido.
+- Puo riattivarla con `powercfg /hibernate on`, ricreando `hiberfil.sys` e le funzioni dipendenti supportate dal PC.
+- Entrambe le modifiche richiedono una conferma testuale esplicita; il Toolkit non riavvia il PC e verifica il risultato.
+- Ambito: macchina. La modifica non entra nel backup/Undo della sessione; il ripristino e disponibile dalla stessa schermata.
+
 ## Laboratorio VirtualBox
 La procedura di test e documentata in `lab/README.md`.
 

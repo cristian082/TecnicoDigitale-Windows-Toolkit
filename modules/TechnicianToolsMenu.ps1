@@ -1,7 +1,7 @@
-# Build 10 integration layer.
+# Top-level integration layer introduced in Build 10 and extended in Build 13.
 # TechnicianTools.ps1 remains the complete Build 8 implementation.
-# This file intentionally overrides only the top-level menu so the offline
-# command reference can be added without rewriting or simplifying existing tools.
+# This file intentionally overrides only the top-level menu so additional tools
+# can be added without rewriting or simplifying existing tools.
 
 function Show-TDTTechnicianTools {
     param([Parameter(Mandatory)][string]$Root)
@@ -27,6 +27,7 @@ function Show-TDTTechnicianTools {
         Write-Host ' [11] Spazio disco / TEMP (read-only)'
         Write-Host ' [12] Triage processi sospetti (read-only)'
         Write-Host ' [13] Comandi del tecnico - catalogo offline' -ForegroundColor Yellow
+        Write-Host ' [14] Ibernazione e hiberfil.sys' -ForegroundColor Yellow
         Write-Host ' [0]  Torna al menu principale'
 
         $c = Read-Host 'Scelta'
@@ -45,6 +46,7 @@ function Show-TDTTechnicianTools {
                 '11' { Get-TDTDiskSpaceReport; Wait-TDTMenu }
                 '12' { Get-TDTProcessTriage | Out-Null; Wait-TDTMenu }
                 '13' { Show-TDTCommandReference -Root $Root }
+                '14' { Show-TDTHibernationTools }
                 '0'  { return }
                 default { Write-Warning 'Scelta non valida.' }
             }

@@ -1,6 +1,6 @@
 # Strumenti Tecnico
 
-`Strumenti-Tecnico.ps1` carica il set operativo completo degli Strumenti Tecnico e il catalogo offline `Comandi del tecnico`. Obiettivo: assistenza su PC Windows 11 sconosciuti con diagnostica ricca, azioni esplicite e un prontuario offline senza dover cercare sul Web i comandi ricorrenti.
+`Strumenti-Tecnico.ps1` carica il set operativo completo degli Strumenti Tecnico, il catalogo offline `Comandi del tecnico` e lo strumento manuale per ibernazione e `hiberfil.sys`. Obiettivo: assistenza su PC Windows 11 sconosciuti con diagnostica ricca, azioni esplicite e un prontuario offline senza dover cercare sul Web i comandi ricorrenti.
 
 ## Regole di sicurezza
 - Nessuno strumento disabilita Defender, Firewall, UAC o Windows Update.
@@ -18,7 +18,8 @@ Build 10 corregge una regressione d'integrazione del Build 9.
 Ordine di caricamento di `Strumenti-Tecnico.ps1`:
 1. `modules/TechnicianTools.ps1` — implementazione operativa completa Build 8;
 2. `modules/CommandReference.ps1` — catalogo offline;
-3. `modules/TechnicianToolsMenu.ps1` — sola integrazione della voce 13.
+3. `modules/HibernationTools.ps1` — stato e gestione volontaria dell'ibernazione;
+4. `modules/TechnicianToolsMenu.ps1` — integrazione delle voci aggiuntive 13 e 14.
 
 ## Strumenti operativi preservati dal Build 8
 TECH-NET-001 — rete: diagnostica rapida e avanzata, configurazione IP, profili rete, route, proxy, porte TCP, DNS e restart adattatore.
@@ -68,6 +69,13 @@ Funzioni:
 L'esecuzione diretta passa da `Invoke-TDTReferenceCommandControlled`, che usa uno `switch` sugli ID conosciuti e invoca esplicitamente executable/cmdlet con argomenti fissi. Se un ID non e allowlistato, il Toolkit rifiuta l'esecuzione diretta e propone implicitamente l'uso della funzione Copia.
 
 I comandi MEDIO/ALTO continuano a mostrare l'avvertenza e ogni esecuzione diretta richiede conferma. Le voci che possono richiedere riavvio lo segnalano, ma il Toolkit non riavvia automaticamente Windows.
+
+## TECH-POWER-001 — Ibernazione e hiberfil.sys
+La voce 14 e separata dai preset e non applica modifiche all'apertura. Mostra se `hiberfil.sys` e presente, la sua dimensione, lo spazio libero sul disco di sistema e, su richiesta, l'output read-only di `powercfg /a`.
+
+La disattivazione usa esclusivamente `powercfg /hibernate off` dopo la conferma testuale `DISATTIVA`. Il Toolkit avverte che vengono disabilitati Ibernazione, Sospensione ibrida e Avvio rapido; la sospensione S3 resta disponibile soltanto quando supportata dall'hardware. La riattivazione usa `powercfg /hibernate on` dopo la conferma `ATTIVA` e avverte che `hiberfil.sys` verra ricreato occupando spazio.
+
+Dopo ogni modifica viene controllata la presenza o assenza di `hiberfil.sys`. Nessun riavvio viene eseguito. La modifica non fa parte dell'Undo per-sessione: la stessa schermata offre l'azione inversa esplicita.
 
 ## Compatibilita
 Target: Windows 11, Windows PowerShell 5.1, esecuzione amministrativa. SMART dettagliato, BitLocker, PnP e alcune console dipendono da hardware, driver ed edizione Windows; il tool deve degradare in modo sicuro quando una funzione non e disponibile.
