@@ -70,8 +70,27 @@ function Reset-TDTPrintSpooler {
     $wasRunning = ($spooler.Status -ne 'Stopped')
     try {
         if ($wasRunning) {
-            Stop-Service -Name Spooler -ErrorAction Stop
-            $spooler.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(15))
+            try {
+                Stop-Service -Name Spooler -ErrorAction Stop
+                $spooler.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(15))
+            }
+            catch {
+                Write-Warning ("Arresto normale dello Spooler non riuscito: {0}" -f $_.Exception.Message)
+                $spooler = Get-Service -Name Spooler -ErrorAction Stop
+                if ($spooler.Status -ne 'Stopped') {
+                    if (-not (Confirm-TDTAction 'Tentare l arresto forzato dello Spooler e dei servizi dipendenti?')) {
+                        Write-Host 'Pulizia della coda annullata; nessun file e stato eliminato.' -ForegroundColor Yellow
+                        return
+                    }
+                    Stop-Service -Name Spooler -Force -ErrorAction Stop
+                    $spooler.WaitForStatus('Stopped', [TimeSpan]::FromSeconds(15))
+                }
+            }
+        }
+
+        $spooler = Get-Service -Name Spooler -ErrorAction Stop
+        if ($spooler.Status -ne 'Stopped') {
+            throw 'Lo Spooler non risulta arrestato: i file di coda non verranno eliminati.'
         }
 
         $queue = Join-Path $env:SystemRoot 'System32\spool\PRINTERS'

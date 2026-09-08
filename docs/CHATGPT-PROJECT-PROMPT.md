@@ -19,7 +19,7 @@ Il Toolkit deve essere sicuro anche su PC sconosciuti. Non deve disabilitare Def
 - Non riscrivere un modulo funzionante quando basta una modifica minima/integration layer.
 
 ## Versione corrente
-`v0.1.16 - Build 16 [development]`.
+`v0.1.17 - Build 17 [development]`.
 
 L'updater e operativo ed e stato usato con successo per aggiornare le build in VM. Il proprietario riferisce che l'aggiornamento funziona benissimo. Non modificare l'updater senza una ragione concreta e un test mirato.
 
@@ -243,8 +243,16 @@ Retest mirato Build 11 sul PC personale: PASS. STANDARD e terminato senza l'avvi
 - nessun DISM/SFC automatico e nessun riavvio del PC;
 - versione incrementata a `v0.1.16 Build 16`.
 
+## Build 17 — fallback controllato Force per Spooler
+- il reset tenta sempre prima `Stop-Service Spooler` senza forzatura;
+- se l'arresto normale fallisce, mostra l'errore e richiede una seconda conferma per usare `Stop-Service Spooler -Force`;
+- se la seconda conferma viene negata, nessun file di coda viene eliminato;
+- prima della rimozione viene verificato che lo Spooler sia realmente `Stopped`;
+- il blocco `finally` continua a ripristinare il servizio se inizialmente era in esecuzione;
+- versione incrementata a `v0.1.17 Build 17`.
+
 ## Prossimo test sul PC personale
-1. aggiornare il Toolkit a `v0.1.16 Build 16`;
+1. aggiornare il Toolkit a `v0.1.17 Build 17`;
 2. aprire Strumenti Tecnico e verificare la nuova voce 14 e lo stato iniziale senza applicare modifiche;
 3. provare la disattivazione con conferma `DISATTIVA`, verificare `powercfg /a` e lo spazio recuperato;
 4. provare la riattivazione con conferma `ATTIVA`, quindi lasciare il PC nello stato desiderato;
@@ -256,11 +264,11 @@ Retest mirato Build 11 sul PC personale: PASS. STANDARD e terminato senza l'avvi
 Gaming va usato come test reale solo se il PC viene effettivamente usato anche per gaming.
 
 ## Prossimo lavoro nella nuova chat
-NON ricreare Build 16: contiene la correzione Widget verificata, PowerToys, la gestione manuale dell'ibernazione, le scorciatoie Shell e l'estensione sicura degli Strumenti Stampanti.
+NON ricreare Build 17: contiene la correzione Widget verificata, PowerToys, la gestione manuale dell'ibernazione, le scorciatoie Shell e il reset sicuro dello Spooler con fallback controllato.
 
 Partire cosi:
 1. leggere questo file e `VERSION.json` live;
-2. aggiornare il PC personale a Build 16;
+2. aggiornare il PC personale a Build 17;
 3. verificare la voce PowerToys ed eventualmente provarne l'installazione;
 4. provare `Standard → Business → Standard` e verificare reversibilita dopo riavvio/login;
 5. documentare i risultati prima di considerare il Toolkit pronto per PC cliente.

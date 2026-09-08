@@ -56,7 +56,8 @@ Questo documento descrive cosa modifica il toolkit e con quale ambito.
 - Elenca i documenti presenti nelle code senza modificarli.
 - Puo inviare una pagina di prova alla stampante selezionata dopo conferma.
 - Apre Impostazioni Stampanti e scanner, Dispositivi e stampanti e Gestione stampa.
-- Il reset della coda mostra prima i documenti, richiede conferma, arresta lo Spooler senza forzatura, elimina esclusivamente i file di spool e verifica il riavvio del servizio.
+- Il reset della coda mostra prima i documenti, richiede conferma e tenta l'arresto normale dello Spooler. Solo se fallisce, propone un secondo tentativo con `-Force` e una nuova conferma.
+- I file di spool vengono eliminati esclusivamente dopo aver verificato l'arresto del servizio; al termine viene ripristinato e verificato lo stato precedente.
 - Non esegue automaticamente DISM o SFC per un problema di stampa.
 
 ## Ibernazione e hiberfil.sys

@@ -35,7 +35,7 @@ TECH-PRINT-001 — stampanti, porte usate, spooler e reset coda esplicito.
 
 Build 16 estende il sottomenu Stampanti senza riscrivere il modulo operativo Build 8. Sono disponibili: diagnostica completa di stampanti/driver/porte/Spooler, elenco read-only dei documenti in coda, pagina di prova su stampante selezionata, apertura delle interfacce moderna/classica/Print Management e reset controllato della coda.
 
-Il reset mostra prima i documenti, richiede conferma, arresta lo Spooler senza `-Force`, elimina soltanto i file nella directory di spool dopo aver verificato l'arresto, riavvia il servizio e ne verifica lo stato. La pagina di prova richiede selezione e conferma esplicite. DISM e SFC non vengono avviati come presunta riparazione universale della stampa.
+Il reset mostra prima i documenti, richiede conferma e tenta inizialmente l'arresto normale dello Spooler. Se questo fallisce, mostra l'errore e offre un secondo tentativo con `-Force`, soggetto a un'ulteriore conferma esplicita. I file nella directory di spool vengono eliminati solo dopo aver verificato che il servizio sia realmente fermo; infine viene ripristinato e verificato lo stato precedente. La pagina di prova richiede selezione e conferma esplicite. DISM e SFC non vengono avviati come presunta riparazione universale della stampa.
 
 TECH-SVC-001 — servizi importanti, Automatici fermi con avvertenza trigger-start e restart di un singolo servizio esplicitamente scelto senza cambiare StartType.
 
