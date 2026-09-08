@@ -45,6 +45,10 @@ Questo documento descrive cosa modifica il toolkit e con quale ambito.
 - Non usa driver updater di terze parti.
 - Ambito: macchina/installer, secondo il pacchetto.
 
+## Catalogo comandi applicazioni
+- `shell:AppsFolder` e disponibile nel catalogo offline per aprire tutte le applicazioni installate e facilitare la creazione manuale di collegamenti.
+- L'esecuzione controllata apre `explorer.exe shell:AppsFolder`; non installa, disinstalla o modifica applicazioni.
+
 ## Ibernazione e hiberfil.sys
 - Strumento manuale separato disponibile negli Strumenti Tecnico; non viene eseguito dai preset.
 - Mostra stato, dimensione di `hiberfil.sys`, spazio libero e stati di sospensione supportati.

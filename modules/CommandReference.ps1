@@ -45,7 +45,7 @@ function Test-TDTReferenceCommandExecutable {
         'USR-001','USR-002','SVC-001',
         'WU-001','WU-002','BOOT-001','BOOT-002',
         'SHR-001','SHR-002','SHR-003',
-        'PWR-001','PWR-002','APP-001'
+        'PWR-001','PWR-002','APP-001','APP-004'
     )
 }
 
@@ -100,6 +100,7 @@ function Invoke-TDTReferenceCommandControlled {
         'PWR-001' { & powercfg.exe /batteryreport }
         'PWR-002' { & powercfg.exe /a }
         'APP-001' { & winget.exe list }
+        'APP-004' { Start-Process explorer.exe -ArgumentList 'shell:AppsFolder' }
 
         default { throw "Il comando $Id non e abilitato per l'esecuzione diretta. Usa Copia comando." }
     }

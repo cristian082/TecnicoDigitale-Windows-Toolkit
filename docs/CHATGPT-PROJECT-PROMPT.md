@@ -19,7 +19,7 @@ Il Toolkit deve essere sicuro anche su PC sconosciuti. Non deve disabilitare Def
 - Non riscrivere un modulo funzionante quando basta una modifica minima/integration layer.
 
 ## Versione corrente
-`v0.1.13 - Build 13 [development]`.
+`v0.1.14 - Build 14 [development]`.
 
 L'updater e operativo ed e stato usato con successo per aggiornare le build in VM. Il proprietario riferisce che l'aggiornamento funziona benissimo. Non modificare l'updater senza una ragione concreta e un test mirato.
 
@@ -220,8 +220,15 @@ Retest mirato Build 11 sul PC personale: PASS. STANDARD e terminato senza l'avvi
 - nessun preset esegue queste azioni, nessun riavvio automatico e nessuna integrazione ingannevole con l'Undo per-sessione;
 - versione incrementata a `v0.1.13 Build 13`.
 
+## Build 14 — AppsFolder nel catalogo offline
+- aggiunto `APP-004 - Tutte le applicazioni (AppsFolder)` al catalogo Comandi del tecnico;
+- comando mostrato e copiabile: `shell:AppsFolder`;
+- esecuzione sicura tramite dispatcher controllato: `explorer.exe shell:AppsFolder`;
+- ricerca disponibile con parole chiave app, applicazioni, collegamenti, desktop e AppsFolder;
+- versione incrementata a `v0.1.14 Build 14`.
+
 ## Prossimo test sul PC personale
-1. aggiornare il Toolkit a `v0.1.13 Build 13`;
+1. aggiornare il Toolkit a `v0.1.14 Build 14`;
 2. aprire Strumenti Tecnico e verificare la nuova voce 14 e lo stato iniziale senza applicare modifiche;
 3. provare la disattivazione con conferma `DISATTIVA`, verificare `powercfg /a` e lo spazio recuperato;
 4. provare la riattivazione con conferma `ATTIVA`, quindi lasciare il PC nello stato desiderato;
@@ -233,11 +240,11 @@ Retest mirato Build 11 sul PC personale: PASS. STANDARD e terminato senza l'avvi
 Gaming va usato come test reale solo se il PC viene effettivamente usato anche per gaming.
 
 ## Prossimo lavoro nella nuova chat
-NON ricreare Build 13: contiene la correzione Widget verificata, PowerToys nel catalogo software e la gestione manuale dell'ibernazione.
+NON ricreare Build 14: contiene la correzione Widget verificata, PowerToys, la gestione manuale dell'ibernazione e AppsFolder nel catalogo offline.
 
 Partire cosi:
 1. leggere questo file e `VERSION.json` live;
-2. aggiornare il PC personale a Build 13;
+2. aggiornare il PC personale a Build 14;
 3. verificare la voce PowerToys ed eventualmente provarne l'installazione;
 4. provare `Standard → Business → Standard` e verificare reversibilita dopo riavvio/login;
 5. documentare i risultati prima di considerare il Toolkit pronto per PC cliente.

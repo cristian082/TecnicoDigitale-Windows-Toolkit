@@ -70,6 +70,8 @@ L'esecuzione diretta passa da `Invoke-TDTReferenceCommandControlled`, che usa un
 
 I comandi MEDIO/ALTO continuano a mostrare l'avvertenza e ogni esecuzione diretta richiede conferma. Le voci che possono richiedere riavvio lo segnalano, ma il Toolkit non riavvia automaticamente Windows.
 
+Build 14 aggiunge `APP-004 - Tutte le applicazioni (AppsFolder)`: il catalogo ricorda il comando rapido `shell:AppsFolder` e il dispatcher controllato lo apre tramite `explorer.exe`. La voce e read-only, non richiede privilegi amministrativi e facilita anche la creazione manuale di collegamenti sul desktop.
+
 ## TECH-POWER-001 — Ibernazione e hiberfil.sys
 La voce 14 e separata dai preset e non applica modifiche all'apertura. Mostra se `hiberfil.sys` e presente, la sua dimensione, lo spazio libero sul disco di sistema e, su richiesta, l'output read-only di `powercfg /a`.
 
