@@ -51,6 +51,14 @@ Questo documento descrive cosa modifica il toolkit e con quale ambito.
 - Sono disponibili anche scorciatoie read-only per Avvio automatico utente/comune, Invia a, Elementi recenti, Download, Cestino, Caratteri, Stampanti e Risorse di rete.
 - Le cartelle vengono soltanto aperte: eventuali aggiunte, spostamenti o eliminazioni restano azioni manuali dell'operatore.
 
+## Strumenti Stampanti
+- Mostra stampanti configurate, driver, porte, stato, condivisione e stato dello Spooler.
+- Elenca i documenti presenti nelle code senza modificarli.
+- Puo inviare una pagina di prova alla stampante selezionata dopo conferma.
+- Apre Impostazioni Stampanti e scanner, Dispositivi e stampanti e Gestione stampa.
+- Il reset della coda mostra prima i documenti, richiede conferma, arresta lo Spooler senza forzatura, elimina esclusivamente i file di spool e verifica il riavvio del servizio.
+- Non esegue automaticamente DISM o SFC per un problema di stampa.
+
 ## Ibernazione e hiberfil.sys
 - Strumento manuale separato disponibile negli Strumenti Tecnico; non viene eseguito dai preset.
 - Mostra stato, dimensione di `hiberfil.sys`, spazio libero e stati di sospensione supportati.

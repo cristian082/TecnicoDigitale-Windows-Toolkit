@@ -19,7 +19,8 @@ Ordine di caricamento di `Strumenti-Tecnico.ps1`:
 1. `modules/TechnicianTools.ps1` — implementazione operativa completa Build 8;
 2. `modules/CommandReference.ps1` — catalogo offline;
 3. `modules/HibernationTools.ps1` — stato e gestione volontaria dell'ibernazione;
-4. `modules/TechnicianToolsMenu.ps1` — integrazione delle voci aggiuntive 13 e 14.
+4. `modules/PrinterToolsExtension.ps1` — estensione isolata del sottomenu Stampanti;
+5. `modules/TechnicianToolsMenu.ps1` — integrazione delle voci aggiuntive 13 e 14.
 
 ## Strumenti operativi preservati dal Build 8
 TECH-NET-001 — rete: diagnostica rapida e avanzata, configurazione IP, profili rete, route, proxy, porte TCP, DNS e restart adattatore.
@@ -31,6 +32,10 @@ TECH-REPAIR-001 — DISM CheckHealth/ScanHealth/RestoreHealth, SFC e sequenza DI
 TECH-DISK-001 — dischi/SMART/CHKDSK scan, inclusi `Get-StorageReliabilityCounter` quando esposto dal controller.
 
 TECH-PRINT-001 — stampanti, porte usate, spooler e reset coda esplicito.
+
+Build 16 estende il sottomenu Stampanti senza riscrivere il modulo operativo Build 8. Sono disponibili: diagnostica completa di stampanti/driver/porte/Spooler, elenco read-only dei documenti in coda, pagina di prova su stampante selezionata, apertura delle interfacce moderna/classica/Print Management e reset controllato della coda.
+
+Il reset mostra prima i documenti, richiede conferma, arresta lo Spooler senza `-Force`, elimina soltanto i file nella directory di spool dopo aver verificato l'arresto, riavvia il servizio e ne verifica lo stato. La pagina di prova richiede selezione e conferma esplicite. DISM e SFC non vengono avviati come presunta riparazione universale della stampa.
 
 TECH-SVC-001 — servizi importanti, Automatici fermi con avvertenza trigger-start e restart di un singolo servizio esplicitamente scelto senza cambiare StartType.
 
