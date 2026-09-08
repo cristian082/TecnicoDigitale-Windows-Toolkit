@@ -128,7 +128,7 @@ function Show-TDTPrinterTools {
         Write-Host ' [2] Mostra documenti nelle code (read-only)'
         Write-Host ' [3] Stampa pagina di prova'
         Write-Host ' [4] Apri Impostazioni Stampanti e scanner'
-        Write-Host ' [5] Apri Dispositivi e stampanti classico'
+        Write-Host ' [5] Apri cartella stampanti (visualizzazione classica)'
         Write-Host ' [6] Apri Gestione stampa avanzata'
         Write-Host ' [7] Reset controllato Spooler e coda'
         Write-Host ' [0] Torna agli Strumenti Tecnico'
@@ -140,7 +140,7 @@ function Show-TDTPrinterTools {
                 '2' { Get-TDTPrintJobs; Wait-TDTMenu }
                 '3' { Invoke-TDTPrinterTestPage; Wait-TDTMenu }
                 '4' { Start-Process 'ms-settings:printers' }
-                '5' { Start-Process control.exe -ArgumentList 'printers' }
+                '5' { Invoke-TDTReferenceCommandControlled -Id 'PRN-004' }
                 '6' { Start-Process printmanagement.msc -ErrorAction Stop }
                 '7' { Reset-TDTPrintSpooler; Wait-TDTMenu }
                 '0' { return }

@@ -37,6 +37,8 @@ Build 16 estende il sottomenu Stampanti senza riscrivere il modulo operativo Bui
 
 Il reset mostra prima i documenti, richiede conferma e tenta inizialmente l'arresto normale dello Spooler. Se questo fallisce, mostra l'errore e offre un secondo tentativo con `-Force`, soggetto a un'ulteriore conferma esplicita. I file nella directory di spool vengono eliminati solo dopo aver verificato che il servizio sia realmente fermo; infine viene ripristinato e verificato lo stato precedente. La pagina di prova richiede selezione e conferma esplicite. DISM e SFC non vengono avviati come presunta riparazione universale della stampa.
 
+Build 18 sostituisce nel sottomenu il comando obsoleto `control printers`, che sul PC reale con Windows 11 build 26200 reindirizza alle Impostazioni moderne ed era quindi un doppione. La voce 5 richiama ora l'unica implementazione allowlistata `PRN-004`, basata su `shell:PrintersFolder`, verificata sullo stesso PC come visualizzazione simile a quella classica.
+
 TECH-SVC-001 — servizi importanti, Automatici fermi con avvertenza trigger-start e restart di un singolo servizio esplicitamente scelto senza cambiare StartType.
 
 TECH-DRV-001 — dispositivi PnP problematici, driver firmati recenti e scansione PnP.
