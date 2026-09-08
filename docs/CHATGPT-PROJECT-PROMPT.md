@@ -19,7 +19,7 @@ Il Toolkit deve essere sicuro anche su PC sconosciuti. Non deve disabilitare Def
 - Non riscrivere un modulo funzionante quando basta una modifica minima/integration layer.
 
 ## Versione corrente
-`v0.1.18 - Build 18 [development]`.
+`v0.1.19 - Build 19 [development]`.
 
 L'updater e operativo ed e stato usato con successo per aggiornare le build in VM. Il proprietario riferisce che l'aggiornamento funziona benissimo. Non modificare l'updater senza una ragione concreta e un test mirato.
 
@@ -257,8 +257,19 @@ Retest mirato Build 11 sul PC personale: PASS. STANDARD e terminato senza l'avvi
 - la voce 5 del sottomenu Stampanti richiama ora `PRN-004` tramite il dispatcher controllato gia esistente, senza duplicare l'implementazione;
 - versione incrementata a `v0.1.18 Build 18`.
 
+## Build 19 — password e backup portabile Wi-Fi
+- aggiunto `modules/WiFiCredentialTools.ps1`, caricato come estensione separata senza riscrivere gli strumenti Build 8;
+- nuova voce 15 negli Strumenti Tecnico;
+- elenco read-only dei profili WLAN salvati;
+- visualizzazione della password di una rete selezionata soltanto dopo conferma `MOSTRA`, senza scrittura nei log e con cancellazione dei file temporanei nel blocco `finally`;
+- export di tutti i profili tramite `netsh wlan export profile key=clear` dopo avviso e conferma `ESPORTA`;
+- import di profili XML validati dopo anteprima e conferma `IMPORTA`, limitato all'utente corrente e senza connessione automatica;
+- avvisi espliciti: gli XML portabili contengono password in chiaro e devono essere protetti ed eliminati quando non servono piu;
+- nessun preset accede alle credenziali Wi-Fi e l'operazione non viene presentata come coperta dall'Undo;
+- versione incrementata a `v0.1.19 Build 19`.
+
 ## Prossimo test sul PC personale
-1. aggiornare il Toolkit a `v0.1.18 Build 18`;
+1. aggiornare il Toolkit a `v0.1.19 Build 19`;
 2. aprire Strumenti Tecnico e verificare la nuova voce 14 e lo stato iniziale senza applicare modifiche;
 3. provare la disattivazione con conferma `DISATTIVA`, verificare `powercfg /a` e lo spazio recuperato;
 4. provare la riattivazione con conferma `ATTIVA`, quindi lasciare il PC nello stato desiderato;
@@ -266,15 +277,20 @@ Retest mirato Build 11 sul PC personale: PASS. STANDARD e terminato senza l'avvi
 6. testare volontariamente installazione o aggiornamento PowerToys e verificarne l'esito;
 7. testare `Standard → Business → Standard`;
 8. dopo il ritorno a Standard, verificare `TaskbarAl` anche dopo riavvio/login per chiudere definitivamente il vecchio bug Active Setup.
+9. aprire Strumenti Tecnico, voce 15, ed elencare i profili Wi-Fi salvati;
+10. mostrare volontariamente la password di una rete nota, senza inviare screenshot o report che la contengano;
+11. esportare i profili in una cartella temporanea, verificarne il numero e cancellare in sicurezza la cartella dopo la prova;
+12. provare l'import soltanto su una VM o su un PC di test autorizzato, verificando che non venga avviata una connessione automatica.
 
 Gaming va usato come test reale solo se il PC viene effettivamente usato anche per gaming.
 
 ## Prossimo lavoro nella nuova chat
-NON ricreare Build 18: contiene la correzione Widget verificata, PowerToys, la gestione manuale dell'ibernazione, le scorciatoie Shell, il reset sicuro dello Spooler e la correzione della voce stampanti classica.
+NON ricreare Build 19: contiene la correzione Widget verificata, PowerToys, la gestione manuale dell'ibernazione, le scorciatoie Shell, il reset sicuro dello Spooler, la correzione della voce stampanti classica e la gestione volontaria delle credenziali Wi-Fi.
 
 Partire cosi:
 1. leggere questo file e `VERSION.json` live;
-2. aggiornare il PC personale a Build 18;
-3. verificare la voce PowerToys ed eventualmente provarne l'installazione;
-4. provare `Standard → Business → Standard` e verificare reversibilita dopo riavvio/login;
-5. documentare i risultati prima di considerare il Toolkit pronto per PC cliente.
+2. aggiornare il PC personale a Build 19;
+3. testare la voce 15 senza condividere password e limitare l'import a un sistema di prova autorizzato;
+4. verificare la voce PowerToys ed eventualmente provarne l'installazione;
+5. provare `Standard → Business → Standard` e verificare reversibilita dopo riavvio/login;
+6. documentare i risultati prima di considerare il Toolkit pronto per PC cliente.

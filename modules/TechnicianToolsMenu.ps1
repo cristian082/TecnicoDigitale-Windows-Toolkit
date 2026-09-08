@@ -28,6 +28,7 @@ function Show-TDTTechnicianTools {
         Write-Host ' [12] Triage processi sospetti (read-only)'
         Write-Host ' [13] Comandi del tecnico - catalogo offline' -ForegroundColor Yellow
         Write-Host ' [14] Ibernazione e hiberfil.sys' -ForegroundColor Yellow
+        Write-Host ' [15] Password e backup Wi-Fi' -ForegroundColor Yellow
         Write-Host ' [0]  Torna al menu principale'
 
         $c = Read-Host 'Scelta'
@@ -47,6 +48,7 @@ function Show-TDTTechnicianTools {
                 '12' { Get-TDTProcessTriage | Out-Null; Wait-TDTMenu }
                 '13' { Show-TDTCommandReference -Root $Root }
                 '14' { Show-TDTHibernationTools }
+                '15' { Show-TDTWiFiCredentialTools }
                 '0'  { return }
                 default { Write-Warning 'Scelta non valida.' }
             }

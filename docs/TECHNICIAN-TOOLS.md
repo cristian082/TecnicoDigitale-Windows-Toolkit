@@ -1,12 +1,13 @@
 # Strumenti Tecnico
 
-`Strumenti-Tecnico.ps1` carica il set operativo completo degli Strumenti Tecnico, il catalogo offline `Comandi del tecnico` e lo strumento manuale per ibernazione e `hiberfil.sys`. Obiettivo: assistenza su PC Windows 11 sconosciuti con diagnostica ricca, azioni esplicite e un prontuario offline senza dover cercare sul Web i comandi ricorrenti.
+`Strumenti-Tecnico.ps1` carica il set operativo completo degli Strumenti Tecnico, il catalogo offline `Comandi del tecnico`, lo strumento manuale per ibernazione e `hiberfil.sys` e la gestione volontaria dei profili Wi-Fi. Obiettivo: assistenza su PC Windows 11 sconosciuti con diagnostica ricca, azioni esplicite e un prontuario offline senza dover cercare sul Web i comandi ricorrenti.
 
 ## Regole di sicurezza
 - Nessuno strumento disabilita Defender, Firewall, UAC o Windows Update.
 - Nessun mass-disable di servizi.
 - Le analisi non rimuovono software, driver o file utente.
 - Le azioni operative sensibili richiedono conferma.
+- Le password Wi-Fi non vengono scritte nei log; gli export portabili in chiaro sono creati solo dopo conferma e devono essere protetti ed eliminati appena non servono piu.
 - Nessun riavvio automatico.
 - Il catalogo offline non usa `Invoke-Expression` e non valuta come codice il testo proveniente dal JSON.
 
@@ -20,7 +21,8 @@ Ordine di caricamento di `Strumenti-Tecnico.ps1`:
 2. `modules/CommandReference.ps1` — catalogo offline;
 3. `modules/HibernationTools.ps1` — stato e gestione volontaria dell'ibernazione;
 4. `modules/PrinterToolsExtension.ps1` — estensione isolata del sottomenu Stampanti;
-5. `modules/TechnicianToolsMenu.ps1` — integrazione delle voci aggiuntive 13 e 14.
+5. `modules/WiFiCredentialTools.ps1` — visualizzazione ed export/import volontari dei profili Wi-Fi;
+6. `modules/TechnicianToolsMenu.ps1` — integrazione delle voci aggiuntive 13, 14 e 15.
 
 ## Strumenti operativi preservati dal Build 8
 TECH-NET-001 — rete: diagnostica rapida e avanzata, configurazione IP, profili rete, route, proxy, porte TCP, DNS e restart adattatore.
@@ -87,6 +89,13 @@ La voce 14 e separata dai preset e non applica modifiche all'apertura. Mostra se
 La disattivazione usa esclusivamente `powercfg /hibernate off` dopo la conferma testuale `DISATTIVA`. Il Toolkit avverte che vengono disabilitati Ibernazione, Sospensione ibrida e Avvio rapido; la sospensione S3 resta disponibile soltanto quando supportata dall'hardware. La riattivazione usa `powercfg /hibernate on` dopo la conferma `ATTIVA` e avverte che `hiberfil.sys` verra ricreato occupando spazio.
 
 Dopo ogni modifica viene controllata la presenza o assenza di `hiberfil.sys`. Nessun riavvio viene eseguito. La modifica non fa parte dell'Undo per-sessione: la stessa schermata offre l'azione inversa esplicita.
+
+## TECH-WIFI-001 — Password e backup Wi-Fi
+La voce 15 e separata dai preset. Puo elencare i profili WLAN salvati, mostrare la password di una rete selezionata oppure esportare e importare profili XML tramite `netsh wlan`.
+
+La visualizzazione richiede la conferma testuale `MOSTRA`; il profilo con la chiave viene esportato in una cartella temporanea univoca, letto e cancellato nel blocco `finally`. La password appare soltanto sullo schermo e non viene inserita nei log del Toolkit.
+
+L'export portabile di tutti i profili richiede la conferma `ESPORTA` e usa `key=clear`, necessario affinche un altro PC possa reimportare le credenziali. La destinazione non puo gia contenere XML, per evitare di mescolare backup diversi. Gli XML contengono password leggibili e devono essere custoditi come dati sensibili, trasferiti con attenzione ed eliminati quando non servono piu. L'import valida i file come profili WLAN, mostra prima l'elenco, avverte che un profilo omonimo puo essere sostituito, richiede `IMPORTA`, li aggiunge per il solo utente corrente e non avvia connessioni.
 
 ## Compatibilita
 Target: Windows 11, Windows PowerShell 5.1, esecuzione amministrativa. SMART dettagliato, BitLocker, PnP e alcune console dipendono da hardware, driver ed edizione Windows; il tool deve degradare in modo sicuro quando una funzione non e disponibile.

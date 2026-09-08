@@ -68,6 +68,15 @@ Questo documento descrive cosa modifica il toolkit e con quale ambito.
 - Entrambe le modifiche richiedono una conferma testuale esplicita; il Toolkit non riavvia il PC e verifica il risultato.
 - Ambito: macchina. La modifica non entra nel backup/Undo della sessione; il ripristino e disponibile dalla stessa schermata.
 
+## Password e backup Wi-Fi
+- Strumento manuale separato disponibile negli Strumenti Tecnico; non viene eseguito dai preset.
+- Elenca i profili Wi-Fi salvati senza mostrare chiavi.
+- Puo mostrare la password di una rete selezionata soltanto dopo conferma testuale; la chiave non viene scritta nei log e i file temporanei vengono rimossi al termine.
+- Puo esportare tutti i profili in XML portabili con `netsh wlan export profile key=clear`, soltanto dopo un avviso e la conferma `ESPORTA`.
+- Gli XML portabili contengono password in chiaro: devono essere protetti, consegnati solo al cliente autorizzato ed eliminati quando non servono piu.
+- Puo validare e reimportare una cartella di profili XML per l'utente corrente dopo la conferma `IMPORTA`; avverte prima che un profilo omonimo puo essere sostituito e non avvia connessioni alle reti.
+- Ambito: profili WLAN del sistema e dell'utente corrente. L'operazione non fa parte dell'Undo del Toolkit.
+
 ## Laboratorio VirtualBox
 La procedura di test e documentata in `lab/README.md`.
 
