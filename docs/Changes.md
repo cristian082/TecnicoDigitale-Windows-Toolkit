@@ -48,6 +48,8 @@ Questo documento descrive cosa modifica il toolkit e con quale ambito.
 ## Catalogo comandi applicazioni
 - `shell:AppsFolder` e disponibile nel catalogo offline per aprire tutte le applicazioni installate e facilitare la creazione manuale di collegamenti.
 - L'esecuzione controllata apre `explorer.exe shell:AppsFolder`; non installa, disinstalla o modifica applicazioni.
+- Sono disponibili anche scorciatoie read-only per Avvio automatico utente/comune, Invia a, Elementi recenti, Download, Cestino, Caratteri, Stampanti e Risorse di rete.
+- Le cartelle vengono soltanto aperte: eventuali aggiunte, spostamenti o eliminazioni restano azioni manuali dell'operatore.
 
 ## Ibernazione e hiberfil.sys
 - Strumento manuale separato disponibile negli Strumenti Tecnico; non viene eseguito dai preset.

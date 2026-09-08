@@ -72,6 +72,8 @@ I comandi MEDIO/ALTO continuano a mostrare l'avvertenza e ogni esecuzione dirett
 
 Build 14 aggiunge `APP-004 - Tutte le applicazioni (AppsFolder)`: il catalogo ricorda il comando rapido `shell:AppsFolder` e il dispatcher controllato lo apre tramite `explorer.exe`. La voce e read-only, non richiede privilegi amministrativi e facilita anche la creazione manuale di collegamenti sul desktop.
 
+Build 15 estende lo stesso gruppo con nove scorciatoie Shell selezionate: Avvio automatico utente e comune, Invia a, Elementi recenti, Download, Cestino, Caratteri, Stampanti e Risorse di rete. Il dispatcher passa ogni destinazione come argomento fisso a `explorer.exe`; nessun testo del catalogo viene valutato come codice.
+
 ## TECH-POWER-001 — Ibernazione e hiberfil.sys
 La voce 14 e separata dai preset e non applica modifiche all'apertura. Mostra se `hiberfil.sys` e presente, la sua dimensione, lo spazio libero sul disco di sistema e, su richiesta, l'output read-only di `powercfg /a`.
 

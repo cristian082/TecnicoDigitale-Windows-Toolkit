@@ -38,14 +38,14 @@ function Test-TDTReferenceCommandExecutable {
     # The text stored in JSON is never evaluated as PowerShell code.
     return $Id -in @(
         'WIN-001','WIN-002','WIN-003','WIN-004','WIN-005',
-        'NET-001','NET-002','NET-003','NET-004','NET-005','NET-006','NET-007','NET-008','NET-009','NET-010','NET-011','NET-012',
-        'PRN-001','PRN-002','PRN-003',
+        'NET-001','NET-002','NET-003','NET-004','NET-005','NET-006','NET-007','NET-008','NET-009','NET-010','NET-011','NET-012','NET-013',
+        'PRN-001','PRN-002','PRN-003','PRN-004',
         'DSK-001','DSK-002','DSK-003',
         'DRV-001','DRV-002','DRV-003',
         'USR-001','USR-002','SVC-001',
         'WU-001','WU-002','BOOT-001','BOOT-002',
         'SHR-001','SHR-002','SHR-003',
-        'PWR-001','PWR-002','APP-001','APP-004'
+        'PWR-001','PWR-002','APP-001','APP-004','APP-005','APP-006','APP-007','APP-008','APP-009','APP-010','APP-011'
     )
 }
 
@@ -71,10 +71,12 @@ function Invoke-TDTReferenceCommandControlled {
         'NET-010' { & tracert.exe 1.1.1.1 }
         'NET-011' { & netsh.exe winhttp show proxy }
         'NET-012' { & netsh.exe wlan show profiles }
+        'NET-013' { & explorer.exe 'shell:NetworkPlacesFolder' }
 
         'PRN-001' { Start-Process control.exe -ArgumentList 'printers' }
         'PRN-002' { Start-Process printmanagement.msc }
         'PRN-003' { & sc.exe query spooler }
+        'PRN-004' { & explorer.exe 'shell:PrintersFolder' }
 
         'DSK-001' { & chkdsk.exe C: /scan }
         'DSK-002' { Start-Process diskmgmt.msc }
@@ -101,6 +103,13 @@ function Invoke-TDTReferenceCommandControlled {
         'PWR-002' { & powercfg.exe /a }
         'APP-001' { & winget.exe list }
         'APP-004' { Start-Process explorer.exe -ArgumentList 'shell:AppsFolder' }
+        'APP-005' { & explorer.exe 'shell:Startup' }
+        'APP-006' { & explorer.exe 'shell:Common Startup' }
+        'APP-007' { & explorer.exe 'shell:SendTo' }
+        'APP-008' { & explorer.exe 'shell:Recent' }
+        'APP-009' { & explorer.exe 'shell:Downloads' }
+        'APP-010' { & explorer.exe 'shell:RecycleBinFolder' }
+        'APP-011' { & explorer.exe 'shell:Fonts' }
 
         default { throw "Il comando $Id non e abilitato per l'esecuzione diretta. Usa Copia comando." }
     }
