@@ -1,6 +1,6 @@
 # Strumenti Tecnico
 
-`Strumenti-Tecnico.ps1` carica il set operativo completo degli Strumenti Tecnico, il catalogo offline `Comandi del tecnico`, lo strumento manuale per ibernazione e `hiberfil.sys` e la gestione volontaria dei profili Wi-Fi. Obiettivo: assistenza su PC Windows 11 sconosciuti con diagnostica ricca, azioni esplicite e un prontuario offline senza dover cercare sul Web i comandi ricorrenti.
+`Strumenti-Tecnico.ps1` carica il set operativo completo degli Strumenti Tecnico, il catalogo offline `Comandi del tecnico`, lo strumento manuale per ibernazione e `hiberfil.sys`, la gestione volontaria dei profili Wi-Fi e il recupero conservativo della sessione del Blocco note moderno. Obiettivo: assistenza su PC Windows 11 sconosciuti con diagnostica ricca, azioni esplicite e un prontuario offline senza dover cercare sul Web i comandi ricorrenti.
 
 ## Regole di sicurezza
 - Nessuno strumento disabilita Defender, Firewall, UAC o Windows Update.
@@ -22,7 +22,8 @@ Ordine di caricamento di `Strumenti-Tecnico.ps1`:
 3. `modules/HibernationTools.ps1` — stato e gestione volontaria dell'ibernazione;
 4. `modules/PrinterToolsExtension.ps1` — estensione isolata del sottomenu Stampanti;
 5. `modules/WiFiCredentialTools.ps1` — visualizzazione ed export/import volontari dei profili Wi-Fi;
-6. `modules/TechnicianToolsMenu.ps1` — integrazione delle voci aggiuntive 13, 14 e 15.
+6. `modules/NotepadSessionTools.ps1` — diagnosi, isolamento e ripristino dello stato sessione del Blocco note moderno;
+7. `modules/TechnicianToolsMenu.ps1` — integrazione delle voci aggiuntive 13-16.
 
 ## Strumenti operativi preservati dal Build 8
 TECH-NET-001 — rete: diagnostica rapida e avanzata, configurazione IP, profili rete, route, proxy, porte TCP, DNS e restart adattatore.
@@ -96,6 +97,13 @@ La voce 15 e separata dai preset. Puo elencare i profili WLAN salvati, mostrare 
 La visualizzazione richiede la conferma testuale `MOSTRA`; il profilo con la chiave viene esportato in una cartella temporanea univoca, letto e cancellato nel blocco `finally`. La password appare soltanto sullo schermo e non viene inserita nei log del Toolkit.
 
 L'export portabile di tutti i profili richiede la conferma `ESPORTA` e usa `key=clear`, necessario affinche un altro PC possa reimportare le credenziali. La destinazione non puo gia contenere XML, per evitare di mescolare backup diversi. Gli XML contengono password leggibili e devono essere custoditi come dati sensibili, trasferiti con attenzione ed eliminati quando non servono piu. L'import valida i file come profili WLAN, mostra prima l'elenco, avverte che un profilo omonimo puo essere sostituito, richiede `IMPORTA`, li aggiunge per il solo utente corrente e non avvia connessioni.
+
+## TECH-NOTEPAD-001 — Ripristino sessione Blocco note
+La voce 16 interviene esclusivamente sullo stato del Blocco note moderno dell'utente corrente in `%LocalAppData%\Packages\Microsoft.WindowsNotepad_8wekyb3d8bbwe\LocalState`. Mostra la presenza e la data di modifica di `TabState` e `WindowState` senza aprirne o riportarne il contenuto.
+
+L'azione `PULISCI` avverte che `TabState` puo contenere appunti mai salvati, richiede la chiusura normale del Blocco note e propone `FORZA` soltanto se il processo resta aperto. Non elimina lo stato: rinomina gli elementi con timestamp `.TDT-backup-*`, permettendo all'app di creare una sessione nuova.
+
+L'azione `RIPRISTINA` recupera l'ultimo backup creato dal Toolkit. Se nel frattempo esiste una nuova sessione, anche questa viene prima rinominata `.TDT-before-restore-*` per non perderla. Nessun preset esegue la funzione e nessun documento viene copiato o cancellato.
 
 ## Compatibilita
 Target: Windows 11, Windows PowerShell 5.1, esecuzione amministrativa. SMART dettagliato, BitLocker, PnP e alcune console dipendono da hardware, driver ed edizione Windows; il tool deve degradare in modo sicuro quando una funzione non e disponibile.

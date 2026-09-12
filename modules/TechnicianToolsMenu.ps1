@@ -29,6 +29,7 @@ function Show-TDTTechnicianTools {
         Write-Host ' [13] Comandi del tecnico - catalogo offline' -ForegroundColor Yellow
         Write-Host ' [14] Ibernazione e hiberfil.sys' -ForegroundColor Yellow
         Write-Host ' [15] Password e backup Wi-Fi' -ForegroundColor Yellow
+        Write-Host ' [16] Ripristino sessione Blocco note' -ForegroundColor Yellow
         Write-Host ' [0]  Torna al menu principale'
 
         $c = Read-Host 'Scelta'
@@ -49,6 +50,7 @@ function Show-TDTTechnicianTools {
                 '13' { Show-TDTCommandReference -Root $Root }
                 '14' { Show-TDTHibernationTools }
                 '15' { Show-TDTWiFiCredentialTools }
+                '16' { Show-TDTNotepadSessionTools }
                 '0'  { return }
                 default { Write-Warning 'Scelta non valida.' }
             }

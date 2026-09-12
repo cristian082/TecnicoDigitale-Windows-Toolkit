@@ -77,6 +77,14 @@ Questo documento descrive cosa modifica il toolkit e con quale ambito.
 - Puo validare e reimportare una cartella di profili XML per l'utente corrente dopo la conferma `IMPORTA`; avverte prima che un profilo omonimo puo essere sostituito e non avvia connessioni alle reti.
 - Ambito: profili WLAN del sistema e dell'utente corrente. L'operazione non fa parte dell'Undo del Toolkit.
 
+## Sessione Blocco note moderno
+- Strumento manuale separato disponibile negli Strumenti Tecnico; non viene eseguito dai preset.
+- Controlla `TabState` e `WindowState` dell'utente corrente senza leggere o registrare il contenuto degli appunti.
+- Dopo la conferma `PULISCI`, conserva lo stato tramite rinomina con timestamp invece di cancellarlo.
+- Chiede prima di chiudere normalmente Blocco note; la terminazione forzata richiede una seconda conferma `FORZA` e avverte del possibile rischio per modifiche non ancora registrate.
+- Puo ripristinare l'ultimo stato conservato con la conferma `RIPRISTINA`; l'eventuale nuova sessione viene a sua volta rinominata e preservata.
+- Ambito: `%LocalAppData%` dell'utente che esegue il Toolkit. Nessun documento viene copiato o eliminato.
+
 ## Laboratorio VirtualBox
 La procedura di test e documentata in `lab/README.md`.
 
